@@ -6,10 +6,19 @@ from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S 
 from dataclasses import dataclass
 import requests_cache
 from pathlib import Path
+from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 20
+NUMBER_OF_PAGES_TO_PARSE = 60
 PRICE_MIN = 2_000
 PRICE_MAX = 6_000
+
+# TODO: double-check
+BLACKLIST_BRAND = [
+    'audi',
+    'bmw',
+]
+
+BLACKLIST_FUEL_CONSUMPTION_URBAN = 10.0
 
 # ebasi
 # BRANDS_PREFIX_NAME = {
@@ -61,12 +70,14 @@ class Car:
 
     title: str
     brand: str
+    engine: str
 
+    # per 100km
     fuel_consumption_urban: float # in liters
     fuel_consumption_highway: float # in liters
 
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str) -> "Car":
+    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str) -> "Car":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
@@ -103,10 +114,10 @@ class Car:
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway)
+        return cls(link_mobile, link_autodata, title, brand, engine_type, fuel_consumption_urban, fuel_consumption_highway)
 
     def __str__(self) -> str:
-        return f'''{self.title } [{self.link_mobile}]
+        return f'''{self.title } {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
     {self.brand}
     {self.fuel_consumption_urban} / {self.fuel_consumption_highway}'''
 
@@ -201,12 +212,20 @@ def extract_cars_data_from_links(links: list[str]):
         title = title.split(' Обява: ')[0]
 
         elem_params = soup.find('div', class_='borderBox carParams')
-        # TODO: fill whatever's important
+
+        elem_engine = soup.find('div', class_='item dvigatel')
+        engine_type = elem_engine.find('div', class_='mpInfo').text
 
         elem_link_autodata = elem_params.find('div', class_='autodata24')
         link_autodata = elem_link_autodata.find('a').get('href')
 
-        cars.append(Car.new(link, link_autodata, title))
+        car = Car.new(link, link_autodata, title, engine_type)
+        if car.brand in BLACKLIST_BRAND:
+            continue
+        if car.fuel_consumption_urban > BLACKLIST_FUEL_CONSUMPTION_URBAN:
+            continue
+
+        cars.append(car)
 
     return cars
 
