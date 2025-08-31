@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import requests_cache
 from pathlib import Path
 
+NUMBER_OF_PAGES_TO_PARSE = 2
+
 MOBILE_PREFIX = 'https://www.mobile.bg/'
 URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
 # `sort=6` - sort by newest
@@ -41,6 +43,7 @@ class Car:
         autodata_html = net_req(link_autodata)
         soup = BeautifulSoup(autodata_html, BS_PARSER)
 
+        # TODO: it is actually possible that we get an invalid link that leads to multiple datasheets that we need to choose from (we need to handle this)
         fuel_consumption_urban = extract_fuel_consumption(soup, 'Разход на гориво - градско')
         fuel_consumption_highway = extract_fuel_consumption(soup, 'Разход на гориво - извънградско')
         if (fuel_consumption_urban is None) or (fuel_consumption_highway is None):
@@ -49,6 +52,10 @@ class Car:
             fuel_consumption_highway = float('inf')
 
         return cls(link_mobile, link_autodata, title, fuel_consumption_urban, fuel_consumption_highway)
+
+    def __str__(self) -> str:
+        return f'''{self.title } [{self.link_mobile}]
+    {self.fuel_consumption_urban} / {self.fuel_consumption_highway}'''
 
 ##########
 ########## network
@@ -153,9 +160,13 @@ def extract_cars_data_from_links(links: list[str]):
 def main() -> None:
     requests_cache.install_cache(NET_CACHE_LOC, expire_after=NET_CACHE_DURATION_SEC)
 
-    car_links = extract_car_links_from_website(number_of_pages_to_extract=1)
+    car_links = extract_car_links_from_website(number_of_pages_to_extract=NUMBER_OF_PAGES_TO_PARSE)
     cars = extract_cars_data_from_links(car_links)
-    breakpoint()
+    cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+
+    for car in cars:
+        print()
+        print(car)
 
 def parse_cmdline() -> None:
     parser = ArgumentParser("Extract car data")
