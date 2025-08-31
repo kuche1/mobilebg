@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from argparse import ArgumentParser
+from re import L
 import requests
 from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
 from dataclasses import dataclass
@@ -8,14 +9,57 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 111
+NUMBER_OF_PAGES_TO_PARSE = 112
 PRICE_MIN_BGN = 2_000
 PRICE_MAX_BGN = 6_000
 
 def blacklist_fnc(car: "Car") -> bool:
-    # too fragile
-    if car.brand in ['audi', 'bmw']:
+
+    if car.brand in ['skoda', 'kia', 'toyota', 'opel', 'hyundai', 'dacia', 'honda', 'aixam', 'suzuki', 'nissan', 'mitsubishi', 'volvo', 'daihatsu', 'subaru', 'ssangyong', 'lancia', 'daewoo']:
+        # at least ok
+        pass
+
+    elif car.brand in ['audi', 'bmw', 'peugeot', 'citroen', 'alfa', 'fiat', 'land', 'jaguar']:
+        # too fragile
         return True
+
+    elif car.brand in ['renault', 'mazda']:
+        # rust
+        return True
+
+    elif car.brand in ['ford']:
+        # fords that are 1.6 disel are ok
+        pass
+
+    elif car.brand in ['mercedes']:
+        # dependes on the mercedes car
+        pass
+
+    elif car.brand in ['chevrolet']:
+        # hard to find parts
+        return True
+
+    elif car.brand in ['seat', 'volkswagen']:
+        # ok ONLY if 1.9TDI
+        pass
+
+    elif car.brand in ['smart']:
+        # the battery is going to die
+        return True
+
+    elif car.brand in ['lada']:
+        return True
+
+    elif car.brand in ['mini']:
+        return True
+
+    elif car.brand in ['jeep']:
+        return True
+
+    else:
+        # too many brands to filter out
+        # raise AssertionError(f'unknown brand: {car.brand}')
+        pass
 
     # too expensive
     if car.fuel_consumption_urban > 7.0:
@@ -23,37 +67,18 @@ def blacklist_fnc(car: "Car") -> bool:
 
     # will be bad on highways
     if car.horsepower != 0:
-        if car.horsepower <= 75: # 90
+        if car.horsepower < 90:
             return True
 
-    return False
+    # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
+    if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
+        return True
 
-# ebasi
-# BRANDS_PREFIX_NAME = {
-#     'audi ': 'audi',
-#     'fiat ': 'fiat',
-#     'mercedes-': 'mercedes',
-#     'seat ': 'seat',
-#     'chevrolet ': 'chevrolet',
-#     'vw ': 'volkswagen',
-#     'Hyundai ': 'Hyundai',
-#     'Citroen ': 'Citroen',
-#     'Toyota ': 'Toyota',
-#     'Dacia ': 'Dacia',
-#     'Opel ': 'Opel',
-#     'Mazda ': 'Mazda',
-#     'BMW ': 'BMW',
-#     'Honda ': 'Honda',
-#     'Aixam ': 'Aixam',
-#     'Renault ': 'Renault',
-#     'Suzuki ': 'Suzuki',
-#     'Nissan ': 'Nissan',
-#     'Mitsubishi ': 'Mitsubishi',
-#     'Volvo ': 'Volvo',
-#     'Daihatsu ': 'Daihatsu',
-#     'Ford ': 'Ford',
-#     'Kia ': 'Kia',
-# }
+    # horsepower if missing (75)
+    if car.link_mobile == 'https://www.mobile.bg/obiava-11749668026765654-toyota-yaris-1-4-d4d':
+        return True
+
+    return False
 
 MOBILE_PREFIX = 'https://www.mobile.bg/'
 URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
