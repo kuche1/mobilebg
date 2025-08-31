@@ -10,12 +10,30 @@
 
 # https://www.mobile.bg/obiava-11756567042078005-honda-civic
 
-# https://www.mobile.bg/obiava-11733734734519038-skoda-fabia-1-6-tdi
-# https://www.mobile.bg/obiava-11755168140519872-skoda-fabia-1-6tdi
-# https://www.mobile.bg/obiava-11722710214333675-honda-civic
-# https://www.mobile.bg/obiava-11756577470299500-honda-civic-2-2-diesel-140hp
-# https://www.mobile.bg/obiava-11745351279405146-honda-fr-v-2-200i-ctdi-euro4
-# https://www.mobile.bg/obiava-11748632810641631-honda-fr-v-2-2-cdti-6mesta-6skorosti-klimatron
+## consumption 4.0 <WRONG(?)> it's actially 5.1 - https://www.automobile-catalog.com/car/2013/3140735/skoda_fabia_1_6_tdi_cr_75.html#gsc.tab=0 [cd 0.32]
+# https://www.mobile.bg/obiava-11733734734519038-skoda-fabia-1-6-tdi 309_500 км
+# https://www.mobile.bg/obiava-11755168140519872-skoda-fabia-1-6tdi 300_000 км
+#
+## [consumption 4.75 or 5.7 ?] [cd 0.32]
+# https://www.mobile.bg/obiava-11755152549224362-kia-rio-1-500-crdi-euro4 [110hp] [mialage 162_000] (4.9 seats)
+#
+# https://www.mobile.bg/obiava-11722710214333675-honda-civic [mialage 324761]
+# https://www.mobile.bg/obiava-11756577470299500-honda-civic-2-2-diesel-140hp [mialage 215_000] [cd 0.32] [consumption 6.6] [140 HP]
+#
+# https://www.mobile.bg/obiava-11745351279405146-honda-fr-v-2-200i-ctdi-euro4 [mialage 199000]
+# https://www.mobile.bg/obiava-11748632810641631-honda-fr-v-2-2-cdti-6mesta-6skorosti-klimatron [mialage 207400]
+
+# https://www.mobile.bg/obiava-11704364264877217-vw-polo-1-9-tdi (NO ima rujda po kalnicite (i moje bi i po mosta - ne se znae)) (Кюстендил)
+
+# https://www.mobile.bg/obiava-11756542187704518-ford-fusion [mialage 160_000] [HP 90] [consumption 5.5] [cd 0.35]
+# https://bg.autodata24.com/ford/fusion/fusion/16-tdci-90-hp/details
+# https://www.automobile-catalog.com/car/2005/961550/ford_fusion_1_6_tdci_.html#gsc.tab=0
+
+# https://www.mobile.bg/obiava-11754677013905706-honda-civic-2-2d [mialage 183_452] [HP 140] [consumption 6.6]
+# https://www.mobile.bg/obiava-11724238603261812-honda-civic-2-2d [mialage 183_680] [HP 140] [consumption 6.6]
+
+# izglejda ok
+# https://www.mobile.bg/obiava-11754655705797468-skoda-scala-lizing-340-lv-mesets [consumption 6.4????5.9????] [HP 110]
 
 from argparse import ArgumentParser
 from re import L
@@ -26,9 +44,11 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-PRICE_MIN_BGN = 3_000
+PRICE_MIN_BGN = 2_500
 PRICE_MAX_BGN = 6_000
-PRICE_STEP = 100 # if this is too big, you might not get some of the listings
+PRICE_STEP = 100 # if this is too big, you might miss some of the listings
+
+PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
 
 def blacklist_fnc(car: "Car") -> bool:
 
@@ -38,14 +58,14 @@ def blacklist_fnc(car: "Car") -> bool:
 
     # will be bad on highways
     if car.horsepower != 0:
-        if car.horsepower <= 90: # < 90
+        if car.horsepower < 90: # < 90 || <= 90
             return True
 
     if car.brand in ['skoda', 'kia', 'toyota', 'opel', 'hyundai', 'dacia', 'honda', 'aixam', 'suzuki', 'nissan', 'mitsubishi', 'volvo', 'daihatsu', 'subaru', 'ssangyong', 'lancia', 'daewoo']:
         # at least ok
         pass
 
-    elif car.brand in ['audi', 'bmw', 'peugeot', 'citroen', 'alfa', 'fiat', 'land', 'jaguar']:
+    elif car.brand in ['audi', 'bmw', 'peugeot', 'citroen', 'alfa', 'fiat', 'land', 'jaguar', 'lexus']:
         # too fragile
         return True
 
@@ -112,7 +132,19 @@ def blacklist_fnc(car: "Car") -> bool:
         return True
 
     # looks terrible
-    if car.link_mobile == 'https://www.mobile.bg/obiava-11750486418014720-vw-new-beetle-1-9-tdi-arte':
+    if car.link_mobile in ['https://www.mobile.bg/obiava-11738432582242534-vw-new-beetle', 'https://www.mobile.bg/obiava-11750486418014720-vw-new-beetle-1-9-tdi-arte']:
+        return True
+
+    # volan ot greshnata strana
+    if car.link_mobile == 'https://www.mobile.bg/obiava-11754564673244207-honda-insight':
+        return True
+
+    # bez klimatik
+    if car.link_mobile == 'https://www.mobile.bg/obiava-11752735199892179-dacia-logan-bez-klimatik':
+        return True
+
+    # electric
+    if car.link_mobile == 'https://www.mobile.bg/obiava-21749152456089930-kia-niro-ev':
         return True
 
     return False
@@ -194,9 +226,10 @@ class Car:
         fuel_consumption_urban = extract_autodata_float(soup, 'Разход на гориво - градско', ' Литра/100 км')
         fuel_consumption_highway = extract_autodata_float(soup, 'Разход на гориво - извънградско', ' Литра/100 км')
         if (fuel_consumption_urban is None) or (fuel_consumption_highway is None):
-            print(f'WARNING: could not extract fuel consumption for: {link_mobile}')
-            fuel_consumption_urban = float('inf')
-            fuel_consumption_highway = float('inf')
+            if PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING:
+                print(f'WARNING: could not extract fuel consumption for: {link_mobile}')
+            fuel_consumption_urban = 0 # float('inf')
+            fuel_consumption_highway = 0 # float('inf')
 
         car_length = extract_autodata_float(soup, 'Дължина', ' ММ')
         if car_length is None:
@@ -278,11 +311,16 @@ def extract_autodata_float(soup: BeautifulSoup, prefix: str, suffix: str) -> flo
 
         part1 = float(part1)
         part2 = float(part2)
+        value = max(part1, part2)
 
+    elif '-' in value:
+        part1, part2 = value.split('-')
+
+        part1 = float(part1)
+        part2 = float(part2)
         value = max(part1, part2)
 
     else:
-
         value = float(value)
 
     return value
@@ -296,7 +334,8 @@ def extract_car_links_from_website() -> list[str]:
     while True:
 
         for page_number in range(1, MAX_PAGE+1):
-            print(f'[{PRICE_MIN_BGN} < {price_min}/{price_max} < {PRICE_MAX_BGN}] extracting links, page {page_number}/{MAX_PAGE}?')
+            if page_number % 10 == 0:
+                print(f'[{PRICE_MIN_BGN} < {price_min}-{price_max} < {PRICE_MAX_BGN}] extracting links, page {page_number}[/~{MAX_PAGE}?]')
 
             url = URL.format(page_num=page_number, price_min=price_min, price_max=price_max)
 
@@ -333,7 +372,8 @@ def extract_cars_data_from_links(links: list[str]):
     cars = []
 
     for link_idx, link in enumerate(links):
-        print(f'extracting car data, link {link_idx+1}/{len(links)}')
+        if link_idx % 100 == 0:
+            print(f'extracting car data, link {link_idx+1}/{len(links)}')
 
         car_html = net_req(link)
         if car_html is None:
@@ -401,7 +441,8 @@ def main() -> None:
     # for some reason the website only allows for up to 150 pages
 
     cars = extract_cars_data_from_links(car_links)
-    cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+    # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+    cars.sort(key=lambda car: car.mialage, reverse=True)
 
     for car in cars:
         print()
