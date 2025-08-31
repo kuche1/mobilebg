@@ -7,7 +7,36 @@ from dataclasses import dataclass
 import requests_cache
 from pathlib import Path
 
-NUMBER_OF_PAGES_TO_PARSE = 10
+NUMBER_OF_PAGES_TO_PARSE = 20
+PRICE_MIN = 2_000
+PRICE_MAX = 6_000
+
+# ebasi
+# BRANDS_PREFIX_NAME = {
+#     'audi ': 'audi',
+#     'fiat ': 'fiat',
+#     'mercedes-': 'mercedes',
+#     'seat ': 'seat',
+#     'chevrolet ': 'chevrolet',
+#     'vw ': 'volkswagen',
+#     'Hyundai ': 'Hyundai',
+#     'Citroen ': 'Citroen',
+#     'Toyota ': 'Toyota',
+#     'Dacia ': 'Dacia',
+#     'Opel ': 'Opel',
+#     'Mazda ': 'Mazda',
+#     'BMW ': 'BMW',
+#     'Honda ': 'Honda',
+#     'Aixam ': 'Aixam',
+#     'Renault ': 'Renault',
+#     'Suzuki ': 'Suzuki',
+#     'Nissan ': 'Nissan',
+#     'Mitsubishi ': 'Mitsubishi',
+#     'Volvo ': 'Volvo',
+#     'Daihatsu ': 'Daihatsu',
+#     'Ford ': 'Ford',
+#     'Kia ': 'Kia',
+# }
 
 MOBILE_PREFIX = 'https://www.mobile.bg/'
 URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
@@ -18,7 +47,7 @@ URL_PROTO = URL.split('//')[0]
 
 BS_PARSER = 'html.parser'
 
-NET_CACHE_DURATION_SEC = 60 * 60 * 24
+NET_CACHE_DURATION_SEC = 60 * 60 * 24 # 24h
 NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 
 ##########
@@ -31,6 +60,8 @@ class Car:
     link_autodata: str
 
     title: str
+    brand: str
+
     fuel_consumption_urban: float # in liters
     fuel_consumption_highway: float # in liters
 
@@ -39,6 +70,27 @@ class Car:
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
+
+        ##### brand
+
+        # for prefix, name in BRANDS_PREFIX_NAME.items():
+        #     if title.lower().startswith(prefix.lower()):
+        #         brand = name.lower()
+        #         break
+        # else:
+        #     raise ValueError(f'cannot determine car brand: {title}')
+
+        brand = title.lower()
+
+        if '-' in brand:
+            brand = brand.split('-')[0]
+
+        brand = brand.split(' ')[0]
+
+        if brand == 'vw':
+            brand = 'volkswagen'
+
+        ##### ...
 
         autodata_html = net_req(link_autodata)
         soup = BeautifulSoup(autodata_html, BS_PARSER)
@@ -51,10 +103,11 @@ class Car:
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, fuel_consumption_urban, fuel_consumption_highway)
+        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway)
 
     def __str__(self) -> str:
         return f'''{self.title } [{self.link_mobile}]
+    {self.brand}
     {self.fuel_consumption_urban} / {self.fuel_consumption_highway}'''
 
 ##########
@@ -121,7 +174,7 @@ def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[s
     car_links = []
 
     for page_number in range(1, number_of_pages_to_extract+1):
-        url = URL.format(page_num=page_number, price_min=2_000, price_max=6_000)
+        url = URL.format(page_num=page_number, price_min=PRICE_MIN, price_max=PRICE_MAX)
         response = net_req(url)
         soup = BeautifulSoup(response, BS_PARSER)
 
