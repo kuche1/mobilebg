@@ -8,7 +8,7 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 60
+NUMBER_OF_PAGES_TO_PARSE = 110
 PRICE_MIN = 2_000
 PRICE_MAX = 6_000
 
@@ -70,14 +70,18 @@ class Car:
 
     title: str
     brand: str
-    engine: str
 
     # per 100km
     fuel_consumption_urban: float # in liters
     fuel_consumption_highway: float # in liters
 
+    engine_type: str
+
+    # in km
+    mialage: float
+
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str) -> "Car":
+    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float) -> "Car":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
@@ -114,12 +118,13 @@ class Car:
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, brand, engine_type, fuel_consumption_urban, fuel_consumption_highway)
+        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage)
 
     def __str__(self) -> str:
-        return f'''{self.title } {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
-    {self.brand}
-    {self.fuel_consumption_urban} / {self.fuel_consumption_highway}'''
+        return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
+    brand: {self.brand}
+    fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
+    mialage: {self.mialage}'''
 
 ##########
 ########## network
@@ -185,6 +190,8 @@ def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[s
     car_links = []
 
     for page_number in range(1, number_of_pages_to_extract+1):
+        print(f'extracting links, page {page_number}/{number_of_pages_to_extract}')
+
         url = URL.format(page_num=page_number, price_min=PRICE_MIN, price_max=PRICE_MAX)
         response = net_req(url)
         soup = BeautifulSoup(response, BS_PARSER)
@@ -203,7 +210,9 @@ def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[s
 def extract_cars_data_from_links(links: list[str]):
     cars = []
 
-    for link in links:
+    for link_idx, link in enumerate(links):
+        print(f'extracting car data, link {link_idx+1}/{len(links)}')
+
         car_html = net_req(link)
         soup = BeautifulSoup(car_html, BS_PARSER)
 
@@ -216,12 +225,24 @@ def extract_cars_data_from_links(links: list[str]):
         elem_engine = soup.find('div', class_='item dvigatel')
         engine_type = elem_engine.find('div', class_='mpInfo').text
 
+        elem_mialage = soup.find('div', class_='item probeg')
+        if elem_mialage is None:
+            mialage = float('inf')
+        else:
+            mialage = elem_mialage.find('div', class_='mpInfo').text
+            tmp = ' км'
+            assert mialage.endswith(tmp)
+            mialage = mialage.removesuffix(tmp)
+            mialage = float(mialage)
+
         elem_link_autodata = elem_params.find('div', class_='autodata24')
         link_autodata = elem_link_autodata.find('a').get('href')
 
-        car = Car.new(link, link_autodata, title, engine_type)
+        car = Car.new(link, link_autodata, title, engine_type, mialage)
+
         if car.brand in BLACKLIST_BRAND:
             continue
+
         if car.fuel_consumption_urban > BLACKLIST_FUEL_CONSUMPTION_URBAN:
             continue
 
