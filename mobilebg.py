@@ -9,15 +9,24 @@ from pathlib import Path
 from colorama import Fore, Style
 
 NUMBER_OF_PAGES_TO_PARSE = 111
-PRICE_MIN = 2_000
-PRICE_MAX = 6_000
+PRICE_MIN_BGN = 2_000
+PRICE_MAX_BGN = 6_000
 
-BLACKLIST_BRAND = [
-    'audi',
-    'bmw',
-]
+def blacklist_fnc(car: "Car") -> bool:
+    # too fragile
+    if car.brand in ['audi', 'bmw']:
+        return True
 
-BLACKLIST_FUEL_CONSUMPTION_URBAN = 7.0
+    # too expensive
+    if car.fuel_consumption_urban > 7.0:
+        return True
+
+    # will be bad on highways
+    if car.horsepower != 0:
+        if car.horsepower <= 75: # 90
+            return True
+
+    return False
 
 # ebasi
 # BRANDS_PREFIX_NAME = {
@@ -84,8 +93,10 @@ class Car:
     # in eur
     price: float
 
+    horsepower: int
+
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float) -> "Car":
+    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float, horsepower: int) -> "Car":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
@@ -122,12 +133,13 @@ class Car:
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price)
+        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower)
 
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
     fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
-    price: {self.price * EUR_TO_BGN :_} BGN
+    horsepower: {self.horsepower}
+    price: {int(self.price * EUR_TO_BGN):_} BGN
     brand: {self.brand}
     mialage: {self.mialage:_}'''
 
@@ -197,7 +209,7 @@ def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[s
     for page_number in range(1, number_of_pages_to_extract+1):
         print(f'extracting links, page {page_number}/{number_of_pages_to_extract}')
 
-        url = URL.format(page_num=page_number, price_min=PRICE_MIN, price_max=PRICE_MAX)
+        url = URL.format(page_num=page_number, price_min=PRICE_MIN_BGN, price_max=PRICE_MAX_BGN)
         response = net_req(url)
         soup = BeautifulSoup(response, BS_PARSER)
 
@@ -237,6 +249,16 @@ def extract_cars_data_from_links(links: list[str]):
         elem_engine = soup.find('div', class_='item dvigatel')
         engine_type = elem_engine.find('div', class_='mpInfo').text
 
+        elem_horsepower = soup.find('div', class_='item moshtnost')
+        if elem_horsepower is None:
+            horsepower = 0
+        else:
+            horsepower = elem_horsepower.find('div', class_='mpInfo').text
+            tmp = ' к.с.'
+            assert horsepower.endswith(tmp)
+            horsepower = horsepower.removesuffix(tmp)
+            horsepower = int(horsepower)
+
         elem_mialage = soup.find('div', class_='item probeg')
         if elem_mialage is None:
             mialage = float('inf')
@@ -250,12 +272,9 @@ def extract_cars_data_from_links(links: list[str]):
         elem_link_autodata = elem_params.find('div', class_='autodata24')
         link_autodata = elem_link_autodata.find('a').get('href')
 
-        car = Car.new(link, link_autodata, title, engine_type, mialage, price)
+        car = Car.new(link, link_autodata, title, engine_type, mialage, price, horsepower)
 
-        if car.brand in BLACKLIST_BRAND:
-            continue
-
-        if car.fuel_consumption_urban > BLACKLIST_FUEL_CONSUMPTION_URBAN:
+        if blacklist_fnc(car):
             continue
 
         cars.append(car)
