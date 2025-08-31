@@ -8,17 +8,16 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 110
+NUMBER_OF_PAGES_TO_PARSE = 111
 PRICE_MIN = 2_000
 PRICE_MAX = 6_000
 
-# TODO: double-check
 BLACKLIST_BRAND = [
     'audi',
     'bmw',
 ]
 
-BLACKLIST_FUEL_CONSUMPTION_URBAN = 10.0
+BLACKLIST_FUEL_CONSUMPTION_URBAN = 7.0
 
 # ebasi
 # BRANDS_PREFIX_NAME = {
@@ -128,9 +127,9 @@ class Car:
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
     fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
-    price: {self.price * EUR_TO_BGN} BGN
+    price: {self.price * EUR_TO_BGN :_} BGN
     brand: {self.brand}
-    mialage: {self.mialage}'''
+    mialage: {self.mialage:_}'''
 
 ##########
 ########## network
