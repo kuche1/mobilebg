@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import requests_cache
 from pathlib import Path
 
-NUMBER_OF_PAGES_TO_PARSE = 2
+NUMBER_OF_PAGES_TO_PARSE = 10
 
 MOBILE_PREFIX = 'https://www.mobile.bg/'
 URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
@@ -85,6 +85,10 @@ def extract_fuel_consumption(soup: BeautifulSoup, prefix: str) -> float | None:
     while '  ' in fuel_consumption:
         fuel_consumption = fuel_consumption.replace('  ', ' ')
     fuel_consumption = fuel_consumption.strip()
+
+    if fuel_consumption == prefix:
+        # the column exists, but the data is empty
+        return None
 
     tmp = prefix + ' '
     assert fuel_consumption.startswith(tmp)
