@@ -59,6 +59,8 @@ BS_PARSER = 'html.parser'
 NET_CACHE_DURATION_SEC = 60 * 60 * 24 # 24h
 NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 
+EUR_TO_BGN = 1.95583
+
 ##########
 ########## class
 ##########
@@ -80,8 +82,11 @@ class Car:
     # in km
     mialage: float
 
+    # in eur
+    price: float
+
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float) -> "Car":
+    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float) -> "Car":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
@@ -118,12 +123,13 @@ class Car:
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage)
+        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price)
 
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
-    brand: {self.brand}
     fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
+    price: {self.price * EUR_TO_BGN} BGN
+    brand: {self.brand}
     mialage: {self.mialage}'''
 
 ##########
@@ -216,9 +222,16 @@ def extract_cars_data_from_links(links: list[str]):
         car_html = net_req(link)
         soup = BeautifulSoup(car_html, BS_PARSER)
 
-        elem_title = soup.find('div', class_='obTitle')
+        elem_info = soup.find('div', class_='contactsBox')
+
+        elem_title = elem_info.find('div', class_='obTitle')
         title = elem_title.text.strip()
         title = title.split(' Обява: ')[0]
+
+        elem_price = elem_info.find('div', class_='Price')
+        price = elem_price.text.strip().split('€')[0]
+        price = price.strip().replace(' ', '')
+        price = float(price)
 
         elem_params = soup.find('div', class_='borderBox carParams')
 
@@ -238,7 +251,7 @@ def extract_cars_data_from_links(links: list[str]):
         elem_link_autodata = elem_params.find('div', class_='autodata24')
         link_autodata = elem_link_autodata.find('a').get('href')
 
-        car = Car.new(link, link_autodata, title, engine_type, mialage)
+        car = Car.new(link, link_autodata, title, engine_type, mialage, price)
 
         if car.brand in BLACKLIST_BRAND:
             continue
