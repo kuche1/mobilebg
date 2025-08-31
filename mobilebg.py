@@ -1,5 +1,14 @@
 #! /usr/bin/env python3
 
+# https://www.mobile.bg/obiava-11756567042078005-honda-civic
+
+# https://www.mobile.bg/obiava-11733734734519038-skoda-fabia-1-6-tdi
+# https://www.mobile.bg/obiava-11755168140519872-skoda-fabia-1-6tdi
+# https://www.mobile.bg/obiava-11722710214333675-honda-civic
+# https://www.mobile.bg/obiava-11756577470299500-honda-civic-2-2-diesel-140hp
+# https://www.mobile.bg/obiava-11745351279405146-honda-fr-v-2-200i-ctdi-euro4
+# https://www.mobile.bg/obiava-11748632810641631-honda-fr-v-2-2-cdti-6mesta-6skorosti-klimatron
+
 from argparse import ArgumentParser
 from re import L
 import requests
@@ -9,11 +18,20 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 112
-PRICE_MIN_BGN = 2_000
+NUMBER_OF_PAGES_TO_PARSE = 150
+PRICE_MIN_BGN = 3_000
 PRICE_MAX_BGN = 6_000
 
 def blacklist_fnc(car: "Car") -> bool:
+
+    # will be hard to control on highways
+    if car.length_mm <= 3615:
+        return True
+
+    # will be bad on highways
+    if car.horsepower != 0:
+        if car.horsepower <= 90: # < 90
+            return True
 
     if car.brand in ['skoda', 'kia', 'toyota', 'opel', 'hyundai', 'dacia', 'honda', 'aixam', 'suzuki', 'nissan', 'mitsubishi', 'volvo', 'daihatsu', 'subaru', 'ssangyong', 'lancia', 'daewoo']:
         # at least ok
@@ -61,29 +79,42 @@ def blacklist_fnc(car: "Car") -> bool:
         # raise AssertionError(f'unknown brand: {car.brand}')
         pass
 
+    # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
+    if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
+        return True
+
+    # ban seats that are not 1.9TDI
+    if car.link_autodata in ['https://bg.autodata24.com/seat/altea/altea-freetrack/16-tdi-cr-105-hp-dpf-2wd/details']:
+        return True
+
     # too expensive
     if car.fuel_consumption_urban > 7.0:
         return True
 
-    # will be bad on highways
-    if car.horsepower != 0:
-        if car.horsepower < 90:
-            return True
-
-    # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
-    if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
+    # only 67HP
+    if car.link_autodata == 'https://bg.autodata24.com/toyota/aygo/aygo/10-i-12v-67-hp/details':
         return True
 
     # horsepower if missing (75)
     if car.link_mobile == 'https://www.mobile.bg/obiava-11749668026765654-toyota-yaris-1-4-d4d':
         return True
 
+    # needs a new engine (that is expensive)
+    if car.link_mobile == 'https://www.mobile.bg/obiava-11749994255252093-skoda-fabia':
+        return True
+
+    # looks terrible
+    if car.link_mobile == 'https://www.mobile.bg/obiava-11750486418014720-vw-new-beetle-1-9-tdi-arte':
+        return True
+
     return False
 
 MOBILE_PREFIX = 'https://www.mobile.bg/'
-URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
+URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/oblast-sofiya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
 # `sort=6` - sort by newest
 # `pictonly=1` - only show if picture is available
+# `namira-se-v-balgariya` - bulgaria
+# `oblast-sofiya` - sofia
 
 URL_PROTO = URL.split('//')[0]
 
@@ -111,14 +142,10 @@ class Car:
     fuel_consumption_highway: float # in liters
 
     engine_type: str
-
-    # in km
-    mialage: float
-
-    # in eur
-    price: float
-
+    mialage: float # in km
+    price: float # in eur
     horsepower: int
+    length_mm: float
 
     @classmethod
     def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float, horsepower: int) -> "Car":
@@ -148,22 +175,29 @@ class Car:
         ##### ...
 
         autodata_html = net_req(link_autodata)
+        assert autodata_html is not None
+
         soup = BeautifulSoup(autodata_html, BS_PARSER)
 
         # TODO: it is actually possible that we get an invalid link that leads to multiple datasheets that we need to choose from (we need to handle this)
-        fuel_consumption_urban = extract_fuel_consumption(soup, 'Разход на гориво - градско')
-        fuel_consumption_highway = extract_fuel_consumption(soup, 'Разход на гориво - извънградско')
+        fuel_consumption_urban = extract_autodata_float(soup, 'Разход на гориво - градско', ' Литра/100 км')
+        fuel_consumption_highway = extract_autodata_float(soup, 'Разход на гориво - извънградско', ' Литра/100 км')
         if (fuel_consumption_urban is None) or (fuel_consumption_highway is None):
             print(f'WARNING: could not extract fuel consumption for: {link_mobile}')
             fuel_consumption_urban = float('inf')
             fuel_consumption_highway = float('inf')
 
-        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower)
+        car_length = extract_autodata_float(soup, 'Дължина', ' ММ')
+        if car_length is None:
+            car_length = float('inf')
+
+        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length)
 
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
     fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
     horsepower: {self.horsepower}
+    length: {self.length_mm} mm
     price: {int(self.price * EUR_TO_BGN):_} BGN
     brand: {self.brand}
     mialage: {self.mialage:_}'''
@@ -172,12 +206,14 @@ class Car:
 ########## network
 ##########
 
-# TODO: actually cache this (at least for a couple of hours) (maybe use MCT ? btw MCT I think needs to be reworked to exclude that hashing shit, it also needs some safety atomic operations)
-def net_req(url: str) -> str:
+def net_req(url: str) -> str | None:
     response = requests.get(url)
 
     if url.startswith(MOBILE_PREFIX):
         response.encoding = "cp1251" # otherwise we get gibberish
+
+    if response.status_code == 404:
+        return None
 
     assert response.ok
     return response.text
@@ -186,47 +222,59 @@ def net_req(url: str) -> str:
 ########## html extract
 ##########
 
-def extract_fuel_consumption(soup: BeautifulSoup, prefix: str) -> float | None:
+def extract_autodata_float(soup: BeautifulSoup, prefix: str, suffix: str) -> float | None:
     elem = soup.find('td', string=prefix)
     if elem is None:
         return None
-    fuel_consumption = elem.parent.text
+    value = elem.parent.text
 
-    fuel_consumption = fuel_consumption.replace('\n', ' ').replace('\t', ' ')
-    while '  ' in fuel_consumption:
-        fuel_consumption = fuel_consumption.replace('  ', ' ')
-    fuel_consumption = fuel_consumption.strip()
+    value = value.replace('\n', ' ').replace('\t', ' ')
+    while '  ' in value:
+        value = value.replace('  ', ' ')
+    value = value.strip()
 
-    if fuel_consumption == prefix:
+    if value == prefix:
         # the column exists, but the data is empty
         return None
 
     tmp = prefix + ' '
-    assert fuel_consumption.startswith(tmp)
-    fuel_consumption = fuel_consumption.removeprefix(tmp)
+    assert value.startswith(tmp)
+    value = value.removeprefix(tmp)
 
-    tmp = ' Литра/100 км'
-    assert fuel_consumption.endswith(tmp)
-    fuel_consumption = fuel_consumption.removesuffix(tmp)
+    assert value.endswith(suffix)
+    value = value.removesuffix(suffix)
 
-    if ' 'in fuel_consumption:
-        part1, part2 = fuel_consumption.split(' ')
+    # if ' ' in value:
+    #     part1, part2 = value.split(' ')
         
+    #     part1 = float(part1)
+
+    #     assert part2.startswith('(')
+    #     part2 = part2[1:]
+
+    #     assert part2.endswith(')')
+    #     part2 = part2[:-1]
+
+    #     part2 = float(part2)
+
+    #     value = max(part1, part2)
+
+    if '(' in value:
+        part1, part2 = value.split('(')
+
+        part1 = part1.removesuffix(' ')
+        part2 = part2.removesuffix(')')
+
         part1 = float(part1)
-
-        assert part2.startswith('(')
-        part2 = part2[1:]
-
-        assert part2.endswith(')')
-        part2 = part2[:-1]
-
         part2 = float(part2)
 
-        fuel_consumption = max(part1, part2)
+        value = max(part1, part2)
 
-    fuel_consumption = float(fuel_consumption)
+    else:
 
-    return fuel_consumption
+        value = float(value)
+
+    return value
 
 def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[str]:
     car_links = []
@@ -235,7 +283,10 @@ def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[s
         print(f'extracting links, page {page_number}/{number_of_pages_to_extract}')
 
         url = URL.format(page_num=page_number, price_min=PRICE_MIN_BGN, price_max=PRICE_MAX_BGN)
+
         response = net_req(url)
+        assert response is not None
+
         soup = BeautifulSoup(response, BS_PARSER)
 
         for elem in soup.find_all("a", class_="title saveSlink"):
@@ -256,6 +307,10 @@ def extract_cars_data_from_links(links: list[str]):
         print(f'extracting car data, link {link_idx+1}/{len(links)}')
 
         car_html = net_req(link)
+        if car_html is None:
+            # has been deleted
+            continue
+
         soup = BeautifulSoup(car_html, BS_PARSER)
 
         elem_info = soup.find('div', class_='contactsBox')
