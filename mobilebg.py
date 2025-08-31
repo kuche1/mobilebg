@@ -1,5 +1,13 @@
 #! /usr/bin/env python3
 
+# INFO:
+#
+# check aerodynamics
+#   important for highway fuel consumption
+#   look for cd
+#   (do note that the surface area is also important) 
+#   https://www.automobile-catalog.com/#gsc.tab=0
+
 # https://www.mobile.bg/obiava-11756567042078005-honda-civic
 
 # https://www.mobile.bg/obiava-11733734734519038-skoda-fabia-1-6-tdi
