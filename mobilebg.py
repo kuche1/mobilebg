@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 import requests
 from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
 from dataclasses import dataclass
+import requests_cache
+from pathlib import Path
 
 URL = 'https://www.mobile.bg/obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
 # `sort=6` - sort by newest
@@ -12,6 +14,9 @@ URL = 'https://www.mobile.bg/obiavi/avtomobili-dzhipove/namira-se-v-balgariya/p-
 URL_PROTO = URL.split('//')[0]
 
 BS_PARSER = 'html.parser'
+
+NET_CACHE_DURATION_SEC = 60 * 60 * 24
+NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 
 @dataclass(kw_only=True)
 class Car:
@@ -61,6 +66,8 @@ def extract_cars_data_from_links(links: list[str]):
     return cars
 
 def main() -> None:
+    requests_cache.install_cache(NET_CACHE_LOC, expire_after=NET_CACHE_DURATION_SEC)
+
     car_links = extract_car_links_from_website(number_of_pages_to_extract=1)
     cars = extract_cars_data_from_links(car_links)
     breakpoint()
