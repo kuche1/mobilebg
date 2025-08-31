@@ -26,9 +26,9 @@ import requests_cache
 from pathlib import Path
 from colorama import Fore, Style
 
-NUMBER_OF_PAGES_TO_PARSE = 150
 PRICE_MIN_BGN = 3_000
 PRICE_MAX_BGN = 6_000
+PRICE_STEP = 100 # if this is too big, you might not get some of the listings
 
 def blacklist_fnc(car: "Car") -> bool:
 
@@ -121,10 +121,13 @@ MOBILE_PREFIX = 'https://www.mobile.bg/'
 URL = MOBILE_PREFIX + 'obiavi/avtomobili-dzhipove/oblast-sofiya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1'
 # `sort=6` - sort by newest
 # `pictonly=1` - only show if picture is available
+#
 # `namira-se-v-balgariya` - bulgaria
 # `oblast-sofiya` - sofia
 
 URL_PROTO = URL.split('//')[0]
+
+MAX_PAGE = 150
 
 BS_PARSER = 'html.parser'
 
@@ -284,27 +287,45 @@ def extract_autodata_float(soup: BeautifulSoup, prefix: str, suffix: str) -> flo
 
     return value
 
-def extract_car_links_from_website(*, number_of_pages_to_extract: int) -> list[str]:
+def extract_car_links_from_website() -> list[str]:
     car_links = []
 
-    for page_number in range(1, number_of_pages_to_extract+1):
-        print(f'extracting links, page {page_number}/{number_of_pages_to_extract}')
+    price_max = PRICE_MAX_BGN
+    price_min = max(price_max - PRICE_STEP, PRICE_MIN_BGN)
 
-        url = URL.format(page_num=page_number, price_min=PRICE_MIN_BGN, price_max=PRICE_MAX_BGN)
+    while True:
 
-        response = net_req(url)
-        assert response is not None
+        for page_number in range(1, MAX_PAGE+1):
+            print(f'[{PRICE_MIN_BGN} < {price_min}/{price_max} < {PRICE_MAX_BGN}] extracting links, page {page_number}/{MAX_PAGE}?')
 
-        soup = BeautifulSoup(response, BS_PARSER)
+            url = URL.format(page_num=page_number, price_min=price_min, price_max=price_max)
 
-        for elem in soup.find_all("a", class_="title saveSlink"):
-            href = elem.get('href')
+            response = net_req(url)
+            assert response is not None
 
-            # 2025.08.31: this is currently the case - the urls start with `//` rather than `https://`
-            if href.startswith('//'):
-                href = URL_PROTO + href
+            soup = BeautifulSoup(response, BS_PARSER)
 
-            car_links.append(href)
+            # TODO: this is fragile
+            # find the "Няма намерени обяви!" message
+            if soup.find('div', class_='width980px pageMessageAlert'):
+                break
+
+            for elem in soup.find_all("a", class_="title saveSlink"):
+                href = elem.get('href')
+
+                # 2025.08.31: this is currently the case - the urls start with `//` rather than `https://`
+                if href.startswith('//'):
+                    href = URL_PROTO + href
+
+                car_links.append(href)
+        else:
+            print("WARNING: reached last possible page, it is likely that some cars were missed")
+
+        if price_min <= PRICE_MIN_BGN:
+            break
+
+        price_max = price_min - 1
+        price_min = max(price_max - PRICE_STEP, PRICE_MIN_BGN)
 
     return car_links
 
@@ -376,7 +397,9 @@ def extract_cars_data_from_links(links: list[str]):
 def main() -> None:
     requests_cache.install_cache(NET_CACHE_LOC, expire_after=NET_CACHE_DURATION_SEC)
 
-    car_links = extract_car_links_from_website(number_of_pages_to_extract=NUMBER_OF_PAGES_TO_PARSE)
+    car_links = extract_car_links_from_website()
+    # for some reason the website only allows for up to 150 pages
+
     cars = extract_cars_data_from_links(car_links)
     cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
 
