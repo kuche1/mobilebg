@@ -29,17 +29,18 @@
 # https://bg.autodata24.com/ford/fusion/fusion/16-tdci-90-hp/details
 # https://www.automobile-catalog.com/car/2005/961550/ford_fusion_1_6_tdci_.html#gsc.tab=0
 
-# https://www.mobile.bg/obiava-11754677013905706-honda-civic-2-2d [mialage 183_452] [HP 140] [consumption 6.6]
 # https://www.mobile.bg/obiava-11724238603261812-honda-civic-2-2d [mialage 183_680] [HP 140] [consumption 6.6]
 
 # izglejda ok
 # https://www.mobile.bg/obiava-11754655705797468-skoda-scala-lizing-340-lv-mesets [consumption 6.4????5.9????] [HP 110]
 
+# looks good
+# https://www.mobile.bg/obiava-11737477063769512-toyota-verso-2-0d-4d-navi-panorama [consumption 5.9/4.4] [HP 125] [mialage 111_111]
+
 from argparse import ArgumentParser
-import requests
 from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
 from dataclasses import dataclass
-import requests_cache
+from requests_cache import CachedSession
 from pathlib import Path
 from colorama import Fore, Style
 
@@ -52,8 +53,9 @@ PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
 def blacklist_fnc(car: "Car") -> bool:
 
     # will be hard to control on highways
-    if car.length_mm <= 3615:
-        return True
+    if car.length_mm != 0:
+        if (car.length_mm <= 3615):
+            return True
 
     # will be bad on highways
     if car.horsepower != 0:
@@ -134,16 +136,24 @@ def blacklist_fnc(car: "Car") -> bool:
     if car.link_mobile in ['https://www.mobile.bg/obiava-11738432582242534-vw-new-beetle', 'https://www.mobile.bg/obiava-11750486418014720-vw-new-beetle-1-9-tdi-arte']:
         return True
 
-    # volan ot greshnata strana
-    if car.link_mobile == 'https://www.mobile.bg/obiava-11754564673244207-honda-insight':
-        return True
-
-    # bez klimatik
-    if car.link_mobile == 'https://www.mobile.bg/obiava-11752735199892179-dacia-logan-bez-klimatik':
-        return True
-
-    # electric
-    if car.link_mobile == 'https://www.mobile.bg/obiava-21749152456089930-kia-niro-ev':
+    if car.link_mobile in [
+        'https://www.mobile.bg/obiava-11730218705875847-infiniti-q-q60s', # broken
+        'https://www.mobile.bg/obiava-11756972387827865-vw-caddy', # ugly minivan taxi
+        'https://www.mobile.bg/obiava-11718829730982754-opel-ampera', # not a car
+        'https://www.mobile.bg/obiava-11687274566657694-moskvich-412', # old
+        'https://www.mobile.bg/obiava-11755276385116294-ford-connect', # ugly
+        'https://www.mobile.bg/obiava-21718230985416582-nissan-qashqai-2-0-16v-avtomat-panorama-nov-vnos-ot-italiya', # kroken
+        'https://www.mobile.bg/obiava-21749152456089930-kia-niro-ev', # electric
+        'https://www.mobile.bg/obiava-11752735199892179-dacia-logan-bez-klimatik', # no air conditioner
+        'https://www.mobile.bg/obiava-11754564673244207-honda-insight', # wheel wrong side
+        'https://www.mobile.bg/obiava-11752502309169199-vw-caddy', # ugly fat taxi
+        'https://www.mobile.bg/obiava-21756716964221395-kia-sportage-2-0', # uses too much fuel
+        'https://www.mobile.bg/obiava-11714283168788667-seat-altea-1-6-xl-benzin-metan-cng', # uses too much fuel
+        'https://www.mobile.bg/obiava-11733769187894687-seat-altea-benzin', # fuel hungry
+        'https://www.mobile.bg/obiava-21755144538268887-uaz-452', # old truck
+        'https://www.mobile.bg/obiava-21744189208414026-ssangyong-actyon-2300-tsena-do-31-viii', # fuel hungry
+        'https://www.mobile.bg/obiava-11718539174391899-opel-senator', # broken
+    ]:
         return True
 
     return False
@@ -162,8 +172,9 @@ MAX_PAGE = 150
 
 BS_PARSER = 'html.parser'
 
-NET_CACHE_DURATION_SEC = 60 * 60 * 24 # 24h
 NET_CACHE_LOC = str(Path(__file__).parent / "cache")
+NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 24 # 24h
+NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30 # 1 month
 
 EUR_TO_BGN = 1.95583
 
@@ -232,7 +243,7 @@ class Car:
 
         car_length = extract_autodata_float(soup, 'Дължина', ' ММ')
         if car_length is None:
-            car_length = float('inf')
+            car_length = 0
 
         return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length)
 
@@ -242,6 +253,7 @@ class Car:
     horsepower: {self.horsepower}
     length: {self.length_mm} mm
     price: {int(self.price * EUR_TO_BGN):_} BGN
+    engine type: {self.engine_type}
     brand: {self.brand}
     mialage: {self.mialage:_}'''
 
@@ -249,8 +261,19 @@ class Car:
 ########## network
 ##########
 
+# TODO: this sucks
+g_session = CachedSession(NET_CACHE_LOC)
+
 def net_req(url: str) -> str | None:
-    response = requests.get(url)
+    if url.startswith('https://www.mobile.bg'):
+        cache_duration = NET_CACHE_DURATION_MOBILEBG_SEC
+    elif url.startswith('https://bg.autodata24.com'):
+        cache_duration = NET_CACHE_DURATION_AUTODATA_SEC
+    else:
+        raise AssertionError(f'unknown URL: {url}')
+
+    # response = requests.get(url)
+    response = g_session.get(url, expire_after=cache_duration)
 
     if url.startswith(MOBILE_PREFIX):
         response.encoding = "cp1251" # otherwise we get gibberish
@@ -434,14 +457,12 @@ def extract_cars_data_from_links(links: list[str]):
 ##########
 
 def main() -> None:
-    requests_cache.install_cache(NET_CACHE_LOC, expire_after=NET_CACHE_DURATION_SEC)
-
     car_links = extract_car_links_from_website()
     # for some reason the website only allows for up to 150 pages
 
     cars = extract_cars_data_from_links(car_links)
-    # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
-    cars.sort(key=lambda car: car.mialage, reverse=True)
+    cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+    # cars.sort(key=lambda car: car.mialage, reverse=True)
 
     for car in cars:
         print()
