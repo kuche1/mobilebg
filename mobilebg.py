@@ -43,19 +43,45 @@ from dataclasses import dataclass
 from requests_cache import CachedSession
 from pathlib import Path
 from colorama import Fore, Style
+from concurrent.futures import ProcessPoolExecutor
 
-PRICE_MIN_BGN = 2_500
-PRICE_MAX_BGN = 6_000
+PRICE_MIN_BGN = 3_500 # TODO: reduce to 3_000
+PRICE_MAX_BGN = 7_000 # TODO: reduce to 6_000
 PRICE_STEP = 100 # if this is too big, you might miss some of the listings
 
 PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
 
+# TODO: set to None
+WHITELIST_BRAND: list | None = [
+    'honda',
+]
+
+BLACKLIST_BRAND: list = [
+    # too fragile
+    'audi', 'bmw', 'peugeot', 'citroen', 'alfa', 'fiat', 'land', 'jaguar', 'lexus',
+
+    # rust
+    'renault', 'mazda',
+
+    # hard to find parts
+    'chevrolet',
+
+    # the battery is going to die
+    'smart',
+
+    'lada',
+
+    'mini',
+
+    'jeep',
+]
+
 def blacklist_fnc(car: "Car") -> bool:
 
-    # will be hard to control on highways
-    if car.length_mm != 0:
-        if (car.length_mm <= 3615):
-            return True
+    # # will be hard to control on highways
+    # if car.length_mm != 0:
+    #     if (car.length_mm <= 3615):
+    #         return True
 
     # will be bad on highways
     if car.horsepower != 0:
@@ -66,14 +92,6 @@ def blacklist_fnc(car: "Car") -> bool:
         # at least ok
         pass
 
-    elif car.brand in ['audi', 'bmw', 'peugeot', 'citroen', 'alfa', 'fiat', 'land', 'jaguar', 'lexus']:
-        # too fragile
-        return True
-
-    elif car.brand in ['renault', 'mazda']:
-        # rust
-        return True
-
     elif car.brand in ['ford']:
         # fords that are 1.6 disel are ok
         pass
@@ -82,47 +100,30 @@ def blacklist_fnc(car: "Car") -> bool:
         # dependes on the mercedes car
         pass
 
-    elif car.brand in ['chevrolet']:
-        # hard to find parts
-        return True
-
     elif car.brand in ['seat', 'volkswagen']:
         # ok ONLY if 1.9TDI
         pass
 
-    elif car.brand in ['smart']:
-        # the battery is going to die
-        return True
-
-    elif car.brand in ['lada']:
-        return True
-
-    elif car.brand in ['mini']:
-        return True
-
-    elif car.brand in ['jeep']:
-        return True
-
     else:
         # too many brands to filter out
-        # raise AssertionError(f'unknown brand: {car.brand}')
-        pass
+        raise AssertionError(f'unknown brand: {car.brand}')
+        # pass
 
-    # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
-    if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
-        return True
+    # # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
+    # if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
+    #     return True
 
-    # ban seats that are not 1.9TDI
-    if car.link_autodata in ['https://bg.autodata24.com/seat/altea/altea-freetrack/16-tdi-cr-105-hp-dpf-2wd/details']:
-        return True
+    # # ban seats that are not 1.9TDI
+    # if car.link_autodata in ['https://bg.autodata24.com/seat/altea/altea-freetrack/16-tdi-cr-105-hp-dpf-2wd/details']:
+    #     return True
 
-    # too expensive
-    if car.fuel_consumption_urban > 7.0:
-        return True
+    # # too expensive
+    # if car.fuel_consumption_urban > 7.0:
+    #     return True
 
-    # only 67HP
-    if car.link_autodata == 'https://bg.autodata24.com/toyota/aygo/aygo/10-i-12v-67-hp/details':
-        return True
+    # # only 67HP
+    # if car.link_autodata == 'https://bg.autodata24.com/toyota/aygo/aygo/10-i-12v-67-hp/details':
+    #     return True
 
     # horsepower if missing (75)
     if car.link_mobile == 'https://www.mobile.bg/obiava-11749668026765654-toyota-yaris-1-4-d4d':
@@ -201,19 +202,12 @@ class Car:
     length_mm: float
 
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float, horsepower: int) -> "Car":
+    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float, horsepower: int) -> "Car | None":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
 
         ##### brand
-
-        # for prefix, name in BRANDS_PREFIX_NAME.items():
-        #     if title.lower().startswith(prefix.lower()):
-        #         brand = name.lower()
-        #         break
-        # else:
-        #     raise ValueError(f'cannot determine car brand: {title}')
 
         brand = title.lower()
 
@@ -224,6 +218,13 @@ class Car:
 
         if brand == 'vw':
             brand = 'volkswagen'
+
+        if WHITELIST_BRAND is not None:
+            if brand not in WHITELIST_BRAND:
+                return None
+
+        if brand in BLACKLIST_BRAND:
+            return None
 
         ##### ...
 
@@ -245,14 +246,21 @@ class Car:
         if car_length is None:
             car_length = 0
 
-        return cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length)
+        ##### return
+
+        car = cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length)
+
+        if blacklist_fnc(car):
+            return None
+
+        return car
 
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
     fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
+    price: {int(self.price * EUR_TO_BGN):_} BGN
     horsepower: {self.horsepower}
     length: {self.length_mm} mm
-    price: {int(self.price * EUR_TO_BGN):_} BGN
     engine type: {self.engine_type}
     brand: {self.brand}
     mialage: {self.mialage:_}'''
@@ -444,8 +452,7 @@ def extract_cars_data_from_links(links: list[str]):
         link_autodata = elem_link_autodata.find('a').get('href')
 
         car = Car.new(link, link_autodata, title, engine_type, mialage, price, horsepower)
-
-        if blacklist_fnc(car):
+        if car is None:
             continue
 
         cars.append(car)
@@ -461,8 +468,9 @@ def main() -> None:
     # for some reason the website only allows for up to 150 pages
 
     cars = extract_cars_data_from_links(car_links)
-    cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+    # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
     # cars.sort(key=lambda car: car.mialage, reverse=True)
+    cars.sort(key=lambda car: (-car.mialage, car.price), reverse=True)
 
     for car in cars:
         print()
