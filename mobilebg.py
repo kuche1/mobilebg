@@ -7,6 +7,9 @@
 #   look for cd
 #   (do note that the surface area is also important) 
 #   https://www.automobile-catalog.com/#gsc.tab=0
+#
+# check car complaints by year
+#   https://www.carcomplaints.com/Honda/Civic/
 
 # https://www.mobile.bg/obiava-11756567042078005-honda-civic
 
@@ -37,6 +40,8 @@
 # looks good
 # https://www.mobile.bg/obiava-11737477063769512-toyota-verso-2-0d-4d-navi-panorama [consumption 5.9/4.4] [HP 125] [mialage 111_111]
 
+# https://www.mobile.bg/obiava-11756831150112606-honda-civic-2-2-i-ctdi-sport [consumption 6.6] [HP 140] [mialage 183_680] [hatchback]
+
 from argparse import ArgumentParser
 from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
 from dataclasses import dataclass
@@ -54,6 +59,7 @@ PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
 # TODO: set to None
 WHITELIST_BRAND: list | None = [
     'honda',
+    # 'toyota'
 ]
 
 BLACKLIST_BRAND: list = [
@@ -77,6 +83,11 @@ BLACKLIST_BRAND: list = [
 ]
 
 def blacklist_fnc(car: "Car") -> bool:
+
+    # TODO: remove
+    # if not car.title.lower().startswith('toyota corolla'):
+    if not car.title.lower().startswith('honda civic'):
+        return True
 
     # # will be hard to control on highways
     # if car.length_mm != 0:
@@ -154,6 +165,7 @@ def blacklist_fnc(car: "Car") -> bool:
         'https://www.mobile.bg/obiava-21755144538268887-uaz-452', # old truck
         'https://www.mobile.bg/obiava-21744189208414026-ssangyong-actyon-2300-tsena-do-31-viii', # fuel hungry
         'https://www.mobile.bg/obiava-11718539174391899-opel-senator', # broken
+        'https://www.mobile.bg/obiava-11756819601829750-toyota-corolla-hybrid', # taxi
     ]:
         return True
 
@@ -200,31 +212,84 @@ class Car:
     price: float # in eur
     horsepower: int
     length_mm: float
+    date_produced: str
+
+    def __str__(self) -> str:
+        return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
+    price: {int(self.price * EUR_TO_BGN):_} BGN
+    date produced: {self.date_produced}
+    fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
+    horsepower: {self.horsepower}
+    length: {self.length_mm} mm
+    engine type: {self.engine_type}
+    brand: {self.brand}
+    mialage: {self.mialage:_}'''
 
     @classmethod
-    def new(cls, link_mobile: str, link_autodata: str, title: str, engine_type:str, mialage: float, price: float, horsepower: int) -> "Car | None":
+    def new(cls, link_mobile: str) -> "Car | None":
         # print()
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
 
-        ##### brand
+        ##### extract data
 
-        brand = title.lower()
-
-        if '-' in brand:
-            brand = brand.split('-')[0]
-
-        brand = brand.split(' ')[0]
-
-        if brand == 'vw':
-            brand = 'volkswagen'
-
-        if WHITELIST_BRAND is not None:
-            if brand not in WHITELIST_BRAND:
-                return None
-
-        if brand in BLACKLIST_BRAND:
+        car_html = net_req(link_mobile)
+        if car_html is None:
+            # has been deleted
             return None
+
+        soup = BeautifulSoup(car_html, BS_PARSER)
+
+        elem_info = soup.find('div', class_='contactsBox')
+
+        ### title
+
+        title = cls._extract_title(elem_info)
+
+        ### brand
+
+        brand = cls._extract_brand(title)
+        if brand is None:
+            return None
+
+        ### ...
+
+        elem_price = elem_info.find('div', class_='Price')
+        price = elem_price.text.strip().split('€')[0]
+        price = price.strip().replace(' ', '')
+        price = float(price)
+
+        elem_params = soup.find('div', class_='borderBox carParams')
+
+        elem_engine = soup.find('div', class_='item dvigatel')
+        engine_type = elem_engine.find('div', class_='mpInfo').text
+
+        elem_horsepower = soup.find('div', class_='item moshtnost')
+        if elem_horsepower is None:
+            horsepower = 0
+        else:
+            horsepower = elem_horsepower.find('div', class_='mpInfo').text
+            tmp = ' к.с.'
+            assert horsepower.endswith(tmp)
+            horsepower = horsepower.removesuffix(tmp)
+            horsepower = int(horsepower)
+
+        elem_mialage = soup.find('div', class_='item probeg')
+        if elem_mialage is None:
+            mialage = float('inf')
+        else:
+            mialage = elem_mialage.find('div', class_='mpInfo').text
+            tmp = ' км'
+            assert mialage.endswith(tmp)
+            mialage = mialage.removesuffix(tmp)
+            mialage = float(mialage)
+
+        elem_link_autodata = elem_params.find('div', class_='autodata24')
+        link_autodata = elem_link_autodata.find('a').get('href')
+
+        ### date produced
+
+        date_produced = cls._extract_date_produced(elem_params)
 
         ##### ...
 
@@ -248,22 +313,49 @@ class Car:
 
         ##### return
 
-        car = cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length)
+        car = cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length, date_produced)
 
         if blacklist_fnc(car):
             return None
 
         return car
 
-    def __str__(self) -> str:
-        return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
-    fuel consumption: {self.fuel_consumption_urban} / {self.fuel_consumption_highway}
-    price: {int(self.price * EUR_TO_BGN):_} BGN
-    horsepower: {self.horsepower}
-    length: {self.length_mm} mm
-    engine type: {self.engine_type}
-    brand: {self.brand}
-    mialage: {self.mialage:_}'''
+    @classmethod
+    def _extract_title(cls, elem_info) -> str:
+        elem_title = elem_info.find('div', class_='obTitle')
+        title = elem_title.text.strip()
+        title = title.split(' Обява: ')[0]
+        return title
+
+    @classmethod
+    def _extract_brand(cls, title: str) -> str | None:
+        brand = title.lower()
+
+        if '-' in brand:
+            brand = brand.split('-')[0]
+
+        brand = brand.split(' ')[0]
+
+        if brand == 'vw':
+            brand = 'volkswagen'
+
+        if WHITELIST_BRAND is not None:
+            if brand not in WHITELIST_BRAND:
+                return None
+
+        if brand in BLACKLIST_BRAND:
+            return None
+        
+        return brand
+
+    @classmethod
+    def _extract_date_produced(cls, elem_params) -> str:
+        date_produced = elem_params.find('div', class_='item proizvodstvo')
+        if date_produced is None:
+            return 'UNKNOWN'
+
+        date_produced = date_produced.find('div', class_='mpInfo').text
+        return date_produced
 
 ##########
 ########## network
@@ -399,65 +491,28 @@ def extract_car_links_from_website() -> list[str]:
     return car_links
 
 def extract_cars_data_from_links(links: list[str]):
-    cars = []
+    # cars = []
+    
+    # for link_idx, link in enumerate(links):
+    #     if link_idx % 100 == 0:
+    #         print(f'extracting car data, link {link_idx+1}/{len(links)}')
+    
+    #     car = extract_car(link)
+    #     if car is None:
+    #         continue
+    
+    #     cars.append(car)
 
-    for link_idx, link in enumerate(links):
-        if link_idx % 100 == 0:
-            print(f'extracting car data, link {link_idx+1}/{len(links)}')
+    # TODO: this might get us IP blocked
+    with ProcessPoolExecutor() as executor:
+        cars = list(executor.map(extract_car, links)) # the function being called here cannot be a lambda
 
-        car_html = net_req(link)
-        if car_html is None:
-            # has been deleted
-            continue
-
-        soup = BeautifulSoup(car_html, BS_PARSER)
-
-        elem_info = soup.find('div', class_='contactsBox')
-
-        elem_title = elem_info.find('div', class_='obTitle')
-        title = elem_title.text.strip()
-        title = title.split(' Обява: ')[0]
-
-        elem_price = elem_info.find('div', class_='Price')
-        price = elem_price.text.strip().split('€')[0]
-        price = price.strip().replace(' ', '')
-        price = float(price)
-
-        elem_params = soup.find('div', class_='borderBox carParams')
-
-        elem_engine = soup.find('div', class_='item dvigatel')
-        engine_type = elem_engine.find('div', class_='mpInfo').text
-
-        elem_horsepower = soup.find('div', class_='item moshtnost')
-        if elem_horsepower is None:
-            horsepower = 0
-        else:
-            horsepower = elem_horsepower.find('div', class_='mpInfo').text
-            tmp = ' к.с.'
-            assert horsepower.endswith(tmp)
-            horsepower = horsepower.removesuffix(tmp)
-            horsepower = int(horsepower)
-
-        elem_mialage = soup.find('div', class_='item probeg')
-        if elem_mialage is None:
-            mialage = float('inf')
-        else:
-            mialage = elem_mialage.find('div', class_='mpInfo').text
-            tmp = ' км'
-            assert mialage.endswith(tmp)
-            mialage = mialage.removesuffix(tmp)
-            mialage = float(mialage)
-
-        elem_link_autodata = elem_params.find('div', class_='autodata24')
-        link_autodata = elem_link_autodata.find('a').get('href')
-
-        car = Car.new(link, link_autodata, title, engine_type, mialage, price, horsepower)
-        if car is None:
-            continue
-
-        cars.append(car)
+    cars = [car for car in cars if car is not None]
 
     return cars
+
+def extract_car(link: str) -> Car | None:
+    return Car.new(link)
 
 ##########
 ########## main
@@ -470,7 +525,7 @@ def main() -> None:
     cars = extract_cars_data_from_links(car_links)
     # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
     # cars.sort(key=lambda car: car.mialage, reverse=True)
-    cars.sort(key=lambda car: (-car.mialage, car.price), reverse=True)
+    cars.sort(key=lambda car: (-car.mialage, car.price))
 
     for car in cars:
         print()
