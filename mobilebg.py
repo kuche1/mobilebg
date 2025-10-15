@@ -42,6 +42,18 @@
 
 # https://www.mobile.bg/obiava-11756831150112606-honda-civic-2-2-i-ctdi-sport [consumption 6.6] [HP 140] [mialage 183_680] [hatchback]
 
+# https://www.mobile.bg/obiava-11754762069158225-opel-meriva [milage 92_000] [HP 101] [price 7_800]
+
+# https://www.mobile.bg/obiava-11735582531025771-suzuki-swift-lpg-1-3-i-92000km [mialage 92_000] [hp 92] [gas]
+
+# https://www.mobile.bg/obiava-21757710139304843-suzuki-ignis-1-3-4x4-92000km
+
+# https://www.mobile.bg/obiava-11756366448461410-kia-ceed-petrol-lpg [fabric gas] [mialage 131_071]
+
+# https://www.mobile.bg/obiava-11749902203208164-nissan-note
+
+# sidenote: [fabric gas] + [mialage <150_000] + [hp >90]
+
 from argparse import ArgumentParser
 from bs4 import BeautifulSoup # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
 from dataclasses import dataclass
@@ -50,17 +62,23 @@ from pathlib import Path
 from colorama import Fore, Style
 from concurrent.futures import ProcessPoolExecutor
 
-PRICE_MIN_BGN = 3_500 # TODO: reduce to 3_000
-PRICE_MAX_BGN = 7_000 # TODO: reduce to 6_000
+PRICE_MIN_BGN = 3_400 # TODO: reduce to 3_000
+PRICE_MAX_BGN = 8_000 # TODO: reduce to 6_000
 PRICE_STEP = 100 # if this is too big, you might miss some of the listings
 
 PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
 
-# TODO: set to None
-WHITELIST_BRAND: list | None = [
-    'honda',
-    # 'toyota'
-]
+NET_CACHE_LOC = str(Path(__file__).parent / "cache")
+NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10 # 10h
+NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30 # 1 month
+NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30 # 1 month
+
+WHITELIST_BRAND: list | None = \
+None
+# [
+#     # 'honda',
+#     'toyota'
+# ]
 
 BLACKLIST_BRAND: list = [
     # too fragile
@@ -83,11 +101,29 @@ BLACKLIST_BRAND: list = [
 ]
 
 def blacklist_fnc(car: "Car") -> bool:
-
     # TODO: remove
+    #
+    # if '1.9' not in car.title.lower():
+    #     return True
+    #
+    # # if not car.title.lower().startswith('honda civic'):
     # if not car.title.lower().startswith('toyota corolla'):
-    if not car.title.lower().startswith('honda civic'):
-        return True
+    #     return True
+    #
+    if True: # gas
+        if (
+            (car.engine_type.lower() != 'газ')
+            and
+            ('gas' not in car.description.lower())
+            and
+            ('газ' not in car.description.lower())
+            and
+            ('газ' not in car.title.lower())
+        ): # TODO: and what if it is gas BUT it's only specified as engine type ?
+            return True
+
+        if 'фабр' not in car.description.lower():
+            return True
 
     # # will be hard to control on highways
     # if car.length_mm != 0:
@@ -117,8 +153,8 @@ def blacklist_fnc(car: "Car") -> bool:
 
     else:
         # too many brands to filter out
-        raise AssertionError(f'unknown brand: {car.brand}')
-        # pass
+        # raise AssertionError(f'unknown brand: {car.brand}')
+        pass
 
     # # ban fords that are not 1.6 disel (so 1.6 TDCi ?)
     # if car.link_autodata in ['https://bg.autodata24.com/ford/fiesta/fiesta-v-mk6/14-tdci-68-hp/details']:
@@ -166,6 +202,16 @@ def blacklist_fnc(car: "Car") -> bool:
         'https://www.mobile.bg/obiava-21744189208414026-ssangyong-actyon-2300-tsena-do-31-viii', # fuel hungry
         'https://www.mobile.bg/obiava-11718539174391899-opel-senator', # broken
         'https://www.mobile.bg/obiava-11756819601829750-toyota-corolla-hybrid', # taxi
+        'https://www.mobile.bg/obiava-11749980271197050-volga-24', # old
+        'https://www.mobile.bg/obiava-11752418981164740-hyundai-i30', # taxi
+        'https://www.mobile.bg/obiava-11724360561495950-mercedes-benz-115-200d', # old
+        'https://www.mobile.bg/obiava-21743146556646997-uaz-2206', # old military
+        'https://www.mobile.bg/obiava-11718987545311023-mg-mgf-1-8-mpi', # no roof
+        'https://www.mobile.bg/obiava-11666104139552976-trabant-601', # old
+        'https://www.mobile.bg/obiava-11756221955881897-toyota-corolla', # taxi
+        'https://www.mobile.bg/obiava-21756123833296131-uaz-469', # old military
+        'https://www.mobile.bg/obiava-21755605551199987-honda-cr-v', # wheel wrong side
+        'https://www.mobile.bg/obiava-11711957700169281-kia-ceed-gaz-barter', # taxi
     ]:
         return True
 
@@ -184,10 +230,6 @@ URL_PROTO = URL.split('//')[0]
 MAX_PAGE = 150
 
 BS_PARSER = 'html.parser'
-
-NET_CACHE_LOC = str(Path(__file__).parent / "cache")
-NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 24 # 24h
-NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30 # 1 month
 
 EUR_TO_BGN = 1.95583
 
@@ -213,6 +255,7 @@ class Car:
     horsepower: int
     length_mm: float
     date_produced: str
+    description: str
 
     def __str__(self) -> str:
         return f'''{self.title} {Fore.BLUE}{self.link_mobile}{Style.RESET_ALL}
@@ -291,6 +334,10 @@ class Car:
 
         date_produced = cls._extract_date_produced(elem_params)
 
+        ### description
+
+        description = cls._extract_description(soup, link_mobile)
+
         ##### ...
 
         autodata_html = net_req(link_autodata)
@@ -313,7 +360,7 @@ class Car:
 
         ##### return
 
-        car = cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length, date_produced)
+        car = cls(link_mobile, link_autodata, title, brand, fuel_consumption_urban, fuel_consumption_highway, engine_type, mialage, price, horsepower, car_length, date_produced, description)
 
         if blacklist_fnc(car):
             return None
@@ -357,6 +404,18 @@ class Car:
         date_produced = date_produced.find('div', class_='mpInfo').text
         return date_produced
 
+    @classmethod
+    def _extract_description(cls, soup, link_mobile: str) -> str:
+        elem_desc = soup.find('div', class_='moreInfo')
+        if elem_desc is None:
+            return 'NO-DESCRIPTION'
+
+        elem_desc = elem_desc.find('div', class_='text')
+        if elem_desc is None:
+            raise AssertionError
+
+        return elem_desc.text.strip()
+
 ##########
 ########## network
 ##########
@@ -365,8 +424,10 @@ class Car:
 g_session = CachedSession(NET_CACHE_LOC)
 
 def net_req(url: str) -> str | None:
-    if url.startswith('https://www.mobile.bg'):
+    if url.startswith('https://www.mobile.bg/obiavi/'):
         cache_duration = NET_CACHE_DURATION_MOBILEBG_SEC
+    elif url.startswith('https://www.mobile.bg/obiava-'):
+        cache_duration = NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC
     elif url.startswith('https://bg.autodata24.com'):
         cache_duration = NET_CACHE_DURATION_AUTODATA_SEC
     else:
@@ -503,7 +564,7 @@ def extract_cars_data_from_links(links: list[str]):
     
     #     cars.append(car)
 
-    # TODO: this might get us IP blocked
+    # # TODO: this might get us IP blocked
     with ProcessPoolExecutor() as executor:
         cars = list(executor.map(extract_car, links)) # the function being called here cannot be a lambda
 
