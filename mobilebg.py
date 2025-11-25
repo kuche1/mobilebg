@@ -82,6 +82,8 @@ def main() -> None:
     # cars.sort(key=lambda car: car.mialage, reverse=True)
     cars.sort(key=lambda car: (-car.mialage, car.price))
 
+    print(f"Found {len(cars)} Cars")
+
     for car in cars:
         print()
         print(car)

@@ -330,6 +330,8 @@ def extract_car_links_from_website() -> list[str]:
 
 
 def extract_cars_data_from_links(links: list[str]):
+    print("Extracting Car Data...")
+
     # cars = []
 
     # for link_idx, link in enumerate(links):
@@ -351,6 +353,8 @@ def extract_cars_data_from_links(links: list[str]):
         )  # the function being called here cannot be a lambda
 
     cars = [car for car in cars if car is not None]
+
+    print("Car Data Extracted")
 
     return cars
 

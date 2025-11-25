@@ -1,4 +1,5 @@
 from requests_cache import CachedSession
+import time
 
 import config
 
@@ -19,6 +20,9 @@ def net_req(url: str) -> str | None:
 
     # response = requests.get(url)
     response = g_session.get(url, expire_after=cache_duration)  # pyright: ignore[reportUnknownMemberType]
+
+    if not response.from_cache:
+        time.sleep(config.NET_HAD_TO_CONNECT_SLEEP)
 
     if url.startswith(config.MOBILE_PREFIX):
         response.encoding = "cp1251"  # otherwise we get gibberish
