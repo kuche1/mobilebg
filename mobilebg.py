@@ -65,14 +65,8 @@
 # sidenote: [fabric gas] + [mialage <150_000] + [hp >90]
 
 from argparse import ArgumentParser
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).parent))
 
 from stuff import extract_car_links_from_website, extract_cars_data_from_links
-
-del sys.path[-1]
 
 ##########
 ########## main
