@@ -1,3 +1,4 @@
 
 /*.sqlite
 /venv
+__pycache__
