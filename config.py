@@ -1,7 +1,7 @@
 from pathlib import Path
 
 PRICE_MIN_BGN = 3_400
-PRICE_MAX_BGN = 10_000
+PRICE_MAX_BGN = 9_000
 PRICE_STEP = 800  # if this is too big, you might miss some of the listings
 
 EXTRACT_CAR_DATA_MAX_WORKERS: None | int = None
@@ -10,7 +10,7 @@ NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
 NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month
 NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30  # 1 month
-NET_HAD_TO_CONNECT_SLEEP = 0.1
+NET_HAD_TO_CONNECT_SLEEP = 0.2
 
 MOBILE_PREFIX = "https://www.mobile.bg/"
 URL = (
@@ -93,13 +93,14 @@ BLACKLIST_LINK_MOBILE: list[str] = [
     "https://www.mobile.bg/obiava-21756123833296131-uaz-469",  # old military
     "https://www.mobile.bg/obiava-21755605551199987-honda-cr-v",  # wheel wrong side
     "https://www.mobile.bg/obiava-11711957700169281-kia-ceed-gaz-barter",  # taxi
+    "https://www.mobile.bg/obiava-11762941916083194-toyota-corolla",  # broken
+    "https://www.mobile.bg/obiava-11755950568112190-toyota-iq-vvti-avtomat",  # 2 seats
+    "https://www.mobile.bg/obiava-11762695831642034-toyota-corolla-verso",  # wrong wheel
+    "https://www.mobile.bg/obiava-11763765782152542-toyota-iq-registrirana",  # 2 seats
 ]
 
 
 def BLACKLIST_FNC(car: "Car") -> bool:
-    if car.link_mobile in BLACKLIST_LINK_MOBILE:
-        return True
-
     if car.title in [
         "Toyota Land cruiser",
         "Toyota Yaris 1.0",
@@ -110,9 +111,6 @@ def BLACKLIST_FNC(car: "Car") -> bool:
 
 
 # def BLACKLIST_FNC(car: "Car") -> bool:
-#     if car.link_mobile in BLACKLIST_LINK_MOBILE:
-#         return True
-
 #     if "yaris" not in car.title.lower():
 #         return True
 
@@ -222,9 +220,6 @@ def BLACKLIST_FNC(car: "Car") -> bool:
 #         "https://www.mobile.bg/obiava-11738432582242534-vw-new-beetle",
 #         "https://www.mobile.bg/obiava-11750486418014720-vw-new-beetle-1-9-tdi-arte",
 #     ]:
-#         return True
-
-#     if car.link_mobile in BLACKLIST_LINK_MOBILE:
 #         return True
 
 #     return False

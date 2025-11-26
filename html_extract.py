@@ -17,7 +17,7 @@ def extract_car_links_from_website() -> list[str]:
         for page_number in range(1, config.MAX_PAGE + 1):
             # if page_number % 10 == 0:
             print(
-                f"[{config.PRICE_MIN_BGN:_} < {price_min:_}:{price_max:_} < {config.PRICE_MAX_BGN:_}] extracting links, page {page_number}[/~{config.MAX_PAGE}?]"
+                f"[{config.PRICE_MIN_BGN:_} < {price_min:_} : {price_max:_} < {config.PRICE_MAX_BGN:_}] extracting links, page {page_number}[/~{config.MAX_PAGE}?]"
             )
 
             url = config.URL.format(

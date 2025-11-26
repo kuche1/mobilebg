@@ -1,10 +1,69 @@
 #! /usr/bin/env python3
 
 ##########
-########## TODAY
+########## 2025.11.28
 ##########
 
-# ...
+##### favourite
+#
+# https://www.mobile.bg/obiava-11761474743038422-toyota-yaris-1-8-ts-shveytsariya
+# 8550lv
+# yaris 1.8
+# 156_890km
+
+# https://www.mobile.bg/obiava-11760697415860317-toyota-yaris-1-3vvt-i-86000km
+# 7999lv
+# yaris 1.3
+# 86_000km
+# ot avtokushta
+
+# https://www.mobile.bg/obiava-11757166837297798-toyota-yaris-1-3-87hp
+# 8400lv
+# yaris 1.3
+# 103_000km
+
+# https://www.mobile.bg/obiava-11763310782783409-toyota-corolla
+# 8500lv
+# corolla
+# 110_000km
+
+# https://www.mobile.bg/obiava-11762099442539799-toyota-auris-1-4-97k-s-top-obsluzhena
+# 8500lv
+# auris 1.4
+# 120_000km
+
+# https://www.mobile.bg/obiava-11752001113986537-toyota-corolla
+# 4500lv
+# corola
+# disel
+# 132_000km
+
+# https://www.mobile.bg/obiava-11759678178212640-toyota-yaris
+# 7299lv
+# yaris
+# disel
+# 132_500km
+
+# https://www.mobile.bg/obiava-11756028969329844-toyota-yaris-1-3i-87ps-italy
+# 6999lv
+# yaris 1.3
+# avtokushta
+# 132_752km
+
+# https://www.mobile.bg/obiava-11736084162543148-toyota-avensis-1-8-i-facelift-sedan
+# 6400lv
+# avensis
+# 143_000km
+
+# https://www.mobile.bg/obiava-11755939300096917-toyota-avensis-1-8vvt-i
+# 6999lv
+# avensis
+# 152_396km
+
+# https://www.mobile.bg/obiava-11707333858665119-toyota-avensis-1-8i-klimatronik
+# 5250lv
+# avensis
+# 161_453km
 
 ##########
 ########## 2025.09.01

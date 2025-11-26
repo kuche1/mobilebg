@@ -47,6 +47,11 @@ class Car:
         # print(f'dbg: {link_mobile=}')
         # print(f'dbg: {link_autodata=}')
 
+        ##### check blacklisted links
+
+        if link_mobile in config.BLACKLIST_LINK_MOBILE:
+            return None
+
         ##### extract data
 
         car_html = net_req(link_mobile)
@@ -90,15 +95,7 @@ class Car:
             horsepower = horsepower.removesuffix(tmp)
             horsepower = int(horsepower)
 
-        elem_mialage = soup.find("div", class_="item probeg")
-        if elem_mialage is None:
-            mialage = float("inf")
-        else:
-            mialage = elem_mialage.find("div", class_="mpInfo").text
-            tmp = " км"
-            assert mialage.endswith(tmp)
-            mialage = mialage.removesuffix(tmp)
-            mialage = float(mialage)
+        mialage = _extract_mialage(soup, link_mobile)
 
         elem_link_autodata = elem_params.find("div", class_="autodata24")
         link_autodata = elem_link_autodata.find("a").get("href")
@@ -206,3 +203,23 @@ class Car:
             raise AssertionError
 
         return elem_desc.text.strip()
+
+
+def _extract_mialage(soup: BeautifulSoup, link_mobile: str) -> float:
+    if (
+        link_mobile
+        == "https://www.mobile.bg/obiava-11762231838386479-toyota-yaris-1300-vvt-i"
+    ):
+        return 135_589.0
+
+    elem_mialage = soup.find("div", class_="item probeg")
+    if elem_mialage is None:
+        mialage = float("inf")
+    else:
+        mialage = elem_mialage.find("div", class_="mpInfo").text
+        tmp = " км"
+        assert mialage.endswith(tmp)
+        mialage = mialage.removesuffix(tmp)
+        mialage = float(mialage)
+
+    return mialage
