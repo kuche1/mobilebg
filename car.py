@@ -1,17 +1,13 @@
+from dataclasses import dataclass
+
 from bs4 import (
     BeautifulSoup,
 )  # pacman -S python-beautifulsoup4 # OR: pacman -S python-beautifulsoup4 python-cchardet python-chardet python-lxml python-html5lib
-from dataclasses import dataclass
 from colorama import Fore, Style
-from concurrent.futures import ProcessPoolExecutor
 
 import config
 from net import net_req
-
-
-##########
-########## class
-##########
+from util import extract_autodata_float
 
 
 @dataclass
@@ -210,154 +206,3 @@ class Car:
             raise AssertionError
 
         return elem_desc.text.strip()
-
-
-##########
-########## html extract
-##########
-
-
-def extract_autodata_float(
-    soup: BeautifulSoup, prefix: str, suffix: str
-) -> float | None:
-    elem = soup.find("td", string=prefix)
-    if elem is None:
-        return None
-    value = elem.parent.text
-
-    value = value.replace("\n", " ").replace("\t", " ")
-    while "  " in value:
-        value = value.replace("  ", " ")
-    value = value.strip()
-
-    if value == prefix:
-        # the column exists, but the data is empty
-        return None
-
-    tmp = prefix + " "
-    assert value.startswith(tmp)
-    value = value.removeprefix(tmp)
-
-    assert value.endswith(suffix)
-    value = value.removesuffix(suffix)
-
-    # if ' ' in value:
-    #     part1, part2 = value.split(' ')
-
-    #     part1 = float(part1)
-
-    #     assert part2.startswith('(')
-    #     part2 = part2[1:]
-
-    #     assert part2.endswith(')')
-    #     part2 = part2[:-1]
-
-    #     part2 = float(part2)
-
-    #     value = max(part1, part2)
-
-    if "(" in value:
-        part1, part2 = value.split("(")
-
-        part1 = part1.removesuffix(" ")
-        part2 = part2.removesuffix(")")
-
-        part1 = float(part1)
-        part2 = float(part2)
-        value = max(part1, part2)
-
-    elif "-" in value:
-        part1, part2 = value.split("-")
-
-        part1 = float(part1)
-        part2 = float(part2)
-        value = max(part1, part2)
-
-    else:
-        value = float(value)
-
-    return value
-
-
-def extract_car_links_from_website() -> list[str]:
-    car_links = []
-
-    price_max = config.PRICE_MAX_BGN
-    price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
-
-    while True:
-        for page_number in range(1, config.MAX_PAGE + 1):
-            # if page_number % 10 == 0:
-            print(
-                f"[{config.PRICE_MIN_BGN} < {price_min}-{price_max} < {config.PRICE_MAX_BGN}] extracting links, page {page_number}[/~{config.MAX_PAGE}?]"
-            )
-
-            url = config.URL.format(
-                page_num=page_number, price_min=price_min, price_max=price_max
-            )
-
-            response = net_req(url)
-            assert response is not None
-
-            soup = BeautifulSoup(response, config.BS_PARSER)
-
-            # TODO: this is fragile
-            # find the "Няма намерени обяви!" message
-            if soup.find("div", class_="width980px pageMessageAlert"):
-                break
-
-            for elem in soup.find_all("a", class_="title saveSlink"):
-                href = elem.get("href")
-
-                # 2025.08.31: this is currently the case - the urls start with `//` rather than `https://`
-                if href.startswith("//"):
-                    href = config.URL_PROTO + href
-
-                car_links.append(href)
-
-        else:
-            print(
-                "WARNING: reached last possible page, it is likely that some cars were missed"
-            )
-
-        if price_min <= config.PRICE_MIN_BGN:
-            break
-
-        price_max = price_min - 1
-        price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
-
-    return car_links
-
-
-def extract_cars_data_from_links(links: list[str]):
-    print("Extracting Car Data...")
-
-    # cars = []
-
-    # for link_idx, link in enumerate(links):
-    #     if link_idx % 100 == 0:
-    #         print(f'extracting car data, link {link_idx+1}/{len(links)}')
-
-    #     car = extract_car(link)
-    #     if car is None:
-    #         continue
-
-    #     cars.append(car)
-
-    # # TODO: this might get us IP blocked
-    with ProcessPoolExecutor(
-        max_workers=config.EXTRACT_CAR_DATA_MAX_WORKERS
-    ) as executor:
-        cars = list(
-            executor.map(extract_car, links)
-        )  # the function being called here cannot be a lambda
-
-    cars = [car for car in cars if car is not None]
-
-    print("Car Data Extracted")
-
-    return cars
-
-
-def extract_car(link: str) -> Car | None:
-    return Car.new(link)

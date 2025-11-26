@@ -100,10 +100,23 @@ def BLACKLIST_FNC(car: "Car") -> bool:
     if car.link_mobile in BLACKLIST_LINK_MOBILE:
         return True
 
-    if "yaris" not in car.title.lower():
+    if car.title in [
+        "Toyota Land cruiser",
+        "Toyota Yaris 1.0",
+    ]:
         return True
 
     return False
+
+
+# def BLACKLIST_FNC(car: "Car") -> bool:
+#     if car.link_mobile in BLACKLIST_LINK_MOBILE:
+#         return True
+
+#     if "yaris" not in car.title.lower():
+#         return True
+
+#     return False
 
 
 # def BLACKLIST_FNC(car: "Car") -> bool:

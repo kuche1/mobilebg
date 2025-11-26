@@ -66,7 +66,7 @@
 
 from argparse import ArgumentParser
 
-from stuff import extract_car_links_from_website, extract_cars_data_from_links
+from html_extract import extract_car_links_from_website, extract_cars_data_from_links
 
 ##########
 ########## main
