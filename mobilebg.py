@@ -127,10 +127,6 @@ from argparse import ArgumentParser
 
 from html_extract import extract_car_links_from_website, extract_cars_data_from_links
 
-##########
-########## main
-##########
-
 
 def main() -> None:
     car_links = extract_car_links_from_website()

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-PRICE_MIN_BGN = 3_400
+PRICE_MIN_BGN = 3_600
 PRICE_MAX_BGN = 9_000
 PRICE_STEP = 800  # if this is too big, you might miss some of the listings
 
@@ -10,7 +10,7 @@ NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
 NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month
 NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30  # 1 month
-NET_HAD_TO_CONNECT_SLEEP = 0.2
+NET_HAD_TO_CONNECT_SLEEP = 0.4  # 0.2 is too little
 
 MOBILE_PREFIX = "https://www.mobile.bg/"
 URL = (
