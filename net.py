@@ -1,8 +1,8 @@
-from requests_cache import CachedSession
 import time
 
-import config
+from requests_cache import CachedSession
 
+import config
 
 # TODO: this sucks
 g_session = CachedSession(config.NET_CACHE_LOC)
@@ -19,7 +19,7 @@ def net_req(url: str) -> str | None:
         raise AssertionError(f"unknown URL: {url}")
 
     # response = requests.get(url)
-    response = g_session.get(url, expire_after=cache_duration)  # pyright: ignore[reportUnknownMemberType]
+    response = g_session.get(url, expire_after=cache_duration)
 
     if not response.from_cache:
         time.sleep(config.NET_HAD_TO_CONNECT_SLEEP)
