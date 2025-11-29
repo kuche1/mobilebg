@@ -9,6 +9,8 @@ from net import net_req
 
 
 def extract_car_links_from_website() -> list[str]:
+    # for some reason the website only allows for up to 150 pages
+
     car_links = []
 
     price_max = config.PRICE_MAX_BGN

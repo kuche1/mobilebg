@@ -273,7 +273,6 @@ from html_extract import extract_car_links_from_website, extract_cars_data_from_
 def main() -> None:
     with ProcessPoolExecutor() as executor:
         car_links = extract_car_links_from_website()
-        # for some reason the website only allows for up to 150 pages
 
         print("Extracting Car Data...")
         cars = []
