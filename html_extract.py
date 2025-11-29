@@ -8,10 +8,10 @@ from car import Car
 from net import net_req
 
 
-def extract_car_links_from_website() -> list[str]:
+def extract_car_links_from_website() -> Generator[str]:
     # for some reason the website only allows for up to 150 pages
 
-    car_links = []
+    number_of_cars_collected = 0
 
     price_max = config.PRICE_MAX_BGN
     price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
@@ -25,7 +25,7 @@ def extract_car_links_from_website() -> list[str]:
             )
             print("extracting links")
             print(f"page {page_number}[/~{config.MAX_PAGE}?]")
-            print(f"{len(car_links)} cars collected so far")
+            print(f"{number_of_cars_collected} cars collected so far")
 
             url = config.URL.format(
                 page_num=page_number, price_min=price_min, price_max=price_max
@@ -43,12 +43,15 @@ def extract_car_links_from_website() -> list[str]:
 
             for elem in soup.find_all("a", class_="title saveSlink"):
                 href = elem.get("href")
+                assert href is not None
+                assert isinstance(href, str)
 
                 # 2025.08.31: this is currently the case - the urls start with `//` rather than `https://`
                 if href.startswith("//"):
                     href = config.URL_PROTO + href
 
-                car_links.append(href)
+                number_of_cars_collected += 1
+                yield href
 
         else:
             print(
@@ -63,20 +66,6 @@ def extract_car_links_from_website() -> list[str]:
 
     print()
 
-    return car_links
 
-
-def extract_cars_data_from_links(
-    executor: ProcessPoolExecutor, links: list[str]
-) -> Generator[Car]:
-    car_futures = [executor.submit(_extract_car, link) for link in links]
-
-    for car_future in as_completed(car_futures):
-        car = car_future.result()
-        if car is None:
-            continue
-        yield car
-
-
-def _extract_car(link: str) -> Car | None:
+def extract_car(link: str) -> Car | None:
     return Car.new(link)

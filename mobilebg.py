@@ -265,22 +265,31 @@
 # sidenote: [fabric gas] + [mialage <150_000] + [hp >90]
 
 from argparse import ArgumentParser
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from html_extract import extract_car_links_from_website, extract_cars_data_from_links
+from html_extract import (
+    extract_car,
+    extract_car_links_from_website,
+)
 
 
 def main() -> None:
     with ProcessPoolExecutor() as executor:
-        car_links = extract_car_links_from_website()
+        car_futures = []
 
-        print("Extracting Car Data...")
+        for car_link in extract_car_links_from_website():
+            car_future = executor.submit(extract_car, car_link)
+            car_futures.append(car_future)
+
         cars = []
-        for car_num, car in enumerate(
-            extract_cars_data_from_links(executor, car_links), start=1
-        ):
-            print(f"Extracted Car {car_num}")
+
+        print("Extracting Car Data")
+        for car_future in as_completed(car_futures):
+            car = car_future.result()
+            if car is None:
+                continue
             cars.append(car)
+            print(f"Extracted Car {len(cars)}")
         print("Car Data Extracted")
 
         # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
