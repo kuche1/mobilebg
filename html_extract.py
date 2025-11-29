@@ -1,4 +1,5 @@
-from concurrent.futures import ProcessPoolExecutor
+from collections.abc import Generator
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
 
@@ -63,35 +64,17 @@ def extract_car_links_from_website() -> list[str]:
     return car_links
 
 
-def extract_cars_data_from_links(links: list[str]):
-    print("Extracting Car Data...")
+def extract_cars_data_from_links(
+    executor: ProcessPoolExecutor, links: list[str]
+) -> Generator[Car]:
+    car_futures = [executor.submit(_extract_car, link) for link in links]
 
-    # cars = []
-
-    # for link_idx, link in enumerate(links):
-    #     if link_idx % 100 == 0:
-    #         print(f'extracting car data, link {link_idx+1}/{len(links)}')
-
-    #     car = extract_car(link)
-    #     if car is None:
-    #         continue
-
-    #     cars.append(car)
-
-    # # TODO: this might get us IP blocked
-    with ProcessPoolExecutor(
-        max_workers=config.EXTRACT_CAR_DATA_MAX_WORKERS
-    ) as executor:
-        cars = list(
-            executor.map(extract_car, links)
-        )  # the function being called here cannot be a lambda
-
-    cars = [car for car in cars if car is not None]
-
-    print("Car Data Extracted")
-
-    return cars
+    for car_future in as_completed(car_futures):
+        car = car_future.result()
+        if car is None:
+            continue
+        yield car
 
 
-def extract_car(link: str) -> Car | None:
+def _extract_car(link: str) -> Car | None:
     return Car.new(link)

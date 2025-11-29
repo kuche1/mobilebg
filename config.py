@@ -238,8 +238,6 @@ BLACKLIST_LINK_MOBILE: list[str] = [
 CAR_DEALERSHIP_OK = True
 # this is not accurate - it treats some non-dealers as dealers
 
-EXTRACT_CAR_DATA_MAX_WORKERS: None | int = None
-
 NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
 NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month

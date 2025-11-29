@@ -265,26 +265,36 @@
 # sidenote: [fabric gas] + [mialage <150_000] + [hp >90]
 
 from argparse import ArgumentParser
+from concurrent.futures import ProcessPoolExecutor
 
 from html_extract import extract_car_links_from_website, extract_cars_data_from_links
 
 
 def main() -> None:
-    car_links = extract_car_links_from_website()
-    # for some reason the website only allows for up to 150 pages
+    with ProcessPoolExecutor() as executor:
+        car_links = extract_car_links_from_website()
+        # for some reason the website only allows for up to 150 pages
 
-    cars = extract_cars_data_from_links(car_links)
-    # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
-    # cars.sort(key=lambda car: car.mialage, reverse=True)
-    cars.sort(key=lambda car: (-car.mialage, car.price))
+        print("Extracting Car Data...")
+        cars = []
+        for car_num, car in enumerate(
+            extract_cars_data_from_links(executor, car_links), start=1
+        ):
+            print(f"Extracted Car {car_num}")
+            cars.append(car)
+        print("Car Data Extracted")
 
-    print(f"Found {len(cars)} Cars")
+        # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
+        # cars.sort(key=lambda car: car.mialage, reverse=True)
+        cars.sort(key=lambda car: (-car.mialage, car.price))
 
-    for car in cars:
+        print(f"Found {len(cars)} Cars")
+
+        for car in cars:
+            print()
+            print(car)
+
         print()
-        print(car)
-
-    print()
 
 
 def parse_cmdline() -> None:
