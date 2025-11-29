@@ -261,6 +261,7 @@ if not CAR_DEALERSHIP_OK:
 URL_PROTO = URL.split("//")[0]
 
 MAX_PAGE = 150
+# for some reason the website only allows for up to 150 pages
 
 BS_PARSER = "html.parser"
 
