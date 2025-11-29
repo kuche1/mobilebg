@@ -275,21 +275,31 @@ from html_extract import (
 
 def main() -> None:
     with ProcessPoolExecutor() as executor:
-        car_futures = []
+        print("Collecting Car Links")
 
-        for car_link in extract_car_links_from_website():
-            car_future = executor.submit(extract_car, car_link)
-            car_futures.append(car_future)
+        future_cars = []
+
+        for future_car_links in as_completed(extract_car_links_from_website(executor)):
+            car_links = future_car_links.result()
+            for car_link in car_links:
+                future_car = executor.submit(extract_car, car_link)
+                future_cars.append(future_car)
+
+        print("Collected Car Links")
+
+        print("Extracting Car Data")
 
         cars = []
 
-        print("Extracting Car Data")
-        for car_future in as_completed(car_futures):
+        for car_future in as_completed(future_cars):
             car = car_future.result()
             if car is None:
                 continue
+
             cars.append(car)
+
             print(f"Extracted Car {len(cars)}")
+
         print("Car Data Extracted")
 
         # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)

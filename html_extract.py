@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
 
@@ -8,16 +8,18 @@ from car import Car
 from net import net_req
 
 
-def extract_car_links_from_website() -> Generator[str]:
+def extract_car_links_from_website(
+    executor: ProcessPoolExecutor,
+) -> Generator[Future[list[str]]]:
     price_max = config.PRICE_MAX_BGN
     price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
 
     while True:
-        print(
-            f"processing price range --> {config.PRICE_MIN_BGN:_} <= [{price_min:_} : {price_max:_}] <= {config.PRICE_MAX_BGN:_}"
-        )
+        # print(
+        #     f"processing price range --> {config.PRICE_MIN_BGN:_} <= [{price_min:_} : {price_max:_}] <= {config.PRICE_MAX_BGN:_}"
+        # )
 
-        yield from _process_price_range(price_min, price_max)
+        yield executor.submit(_process_price_range, price_min, price_max)
 
         if price_min <= config.PRICE_MIN_BGN:
             break
@@ -25,17 +27,19 @@ def extract_car_links_from_website() -> Generator[str]:
         price_max = price_min - 1
         price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
 
-    print()
+    # print()
 
 
 def extract_car(link: str) -> Car | None:
     return Car.new(link)
 
 
-def _process_price_range(price_min: int, price_max: int) -> Generator[str]:
+def _process_price_range(price_min: int, price_max: int) -> list[str]:
+    collected_car_links = []
+
     for page_number in range(1, config.MAX_PAGE + 1):
         # if page_number % 10 == 0:
-        print(f"processing page {page_number}[/~{config.MAX_PAGE}?]")
+        # print(f"processing page {page_number}[/~{config.MAX_PAGE}?]")
 
         url = config.URL.format(
             page_num=page_number, price_min=price_min, price_max=price_max
@@ -60,9 +64,11 @@ def _process_price_range(price_min: int, price_max: int) -> Generator[str]:
             if href.startswith("//"):
                 href = config.URL_PROTO + href
 
-            yield href
+            collected_car_links.append(href)
 
     else:
         print(
             "WARNING: reached last possible page, it is likely that some cars were missed"
         )
+
+    return collected_car_links
