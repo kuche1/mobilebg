@@ -68,6 +68,7 @@ def BLACKLIST_FNC(car: "Car") -> bool:
         "Toyota Yaris 1.0VVT-i EURO 5 ЛИЗИНГ",
         "Toyota Yaris 1.0i NAVI/KAMERA EURO 5",
         "Toyota Yaris P1 1.0 Expo",
+        "Toyota Yaris 1.0 VVT-I ",
     ]:
         return True
 

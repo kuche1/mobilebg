@@ -312,8 +312,6 @@ def main() -> None:
             print()
             print(car)
 
-        print()
-
 
 def parse_cmdline() -> None:
     parser = ArgumentParser("Extract car data")
