@@ -84,8 +84,9 @@ class Car:
 
         elem_params = soup.find("div", class_="borderBox carParams")
 
-        elem_engine = soup.find("div", class_="item dvigatel")
-        engine_type = elem_engine.find("div", class_="mpInfo").text
+        engine_type = _extract_engine_type(soup)
+        if engine_type is None:
+            return None
 
         gearbox = _extract_gearbox(soup)
         if gearbox is None:
@@ -259,3 +260,17 @@ def _extract_gearbox(soup: BeautifulSoup) -> str | None:
         return None
 
     return gearabox
+
+
+def _extract_engine_type(soup: BeautifulSoup) -> str | None:
+    elem_engine = soup.find("div", class_="item dvigatel")
+    assert elem_engine is not None
+
+    elem_engine = elem_engine.find("div", class_="mpInfo")
+    assert elem_engine is not None
+
+    engine_type = elem_engine.text
+    if engine_type in config.ENGINE_TYPE_BLACKLIST:
+        return None
+
+    return engine_type

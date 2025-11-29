@@ -16,9 +16,13 @@ def extract_car_links_from_website() -> list[str]:
     while True:
         for page_number in range(1, config.MAX_PAGE + 1):
             # if page_number % 10 == 0:
+            print("====================")
             print(
-                f"[{config.PRICE_MIN_BGN:_} < {price_min:_} : {price_max:_} < {config.PRICE_MAX_BGN:_}] extracting links, page {page_number}[/~{config.MAX_PAGE}?]"
+                f"price --> {config.PRICE_MIN_BGN:_} <= [{price_min:_} : {price_max:_}] <= {config.PRICE_MAX_BGN:_}"
             )
+            print("extracting links")
+            print(f"page {page_number}[/~{config.MAX_PAGE}?]")
+            print(f"{len(car_links)} cars collected so far")
 
             url = config.URL.format(
                 page_num=page_number, price_min=price_min, price_max=price_max
@@ -53,6 +57,8 @@ def extract_car_links_from_website() -> list[str]:
 
         price_max = price_min - 1
         price_min = max(price_max - config.PRICE_STEP, config.PRICE_MIN_BGN)
+
+    print()
 
     return car_links
 

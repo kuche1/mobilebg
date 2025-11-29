@@ -1,6 +1,76 @@
 #! /usr/bin/env python3
 
 ##########
+########## 2025.11.30
+##########
+
+##### final verdict
+# https://www.mobile.bg/obiava-11757166837297798-toyota-yaris-1-3-87hp
+
+##### verdict
+#
+# ABCDEF
+#
+# A [niski kilometri] [from reseller] [nqma nomera]
+# B [vsichko e ok]
+# C [nqma nomera] [1.5]
+# D [<B]
+# E [1.8] [nqma nomera]
+# F [<B]
+#
+# B > D > F
+#
+# A [niski kilometri] [from reseller] [nqma nomera]
+# B [vsichko e ok]
+# C [nqma nomera] [1.5]
+# E [1.8] [nqma nomera]
+#
+# given che tova che A, C i E nqmat nomera, tova bi oznachavalo che
+# sa ot reseller-i, toest izglejda B e nai-dobriq varqnt
+
+### A [niski kilometri] [from reseller] [nqma nomera]
+# https://www.mobile.bg/obiava-11760697415860317-toyota-yaris-1-3vvt-i-86000km
+# + 86000km
+# = yaris 1.3
+# - reseller
+# - bez nomera
+
+### B [vsichko e ok]
+# https://www.mobile.bg/obiava-11757166837297798-toyota-yaris-1-3-87hp
+# = 103000km
+# = yaris 1.3
+# + not reseller
+# + ima nomera
+
+### C [nqma nomera] [1.5]
+# https://www.mobile.bg/obiava-11655467283811319-toyota-yaris-1-5-vvti
+# - 145000km
+# + yaris 1.5
+# + not reseller
+# - nqma nomera
+
+### D [<B]
+# https://www.mobile.bg/obiava-11760294422408972-toyota-yaris-1-3-vvti-lpg
+# - 154157 км
+# = yaris 1.3
+# + not reseller
+# + ima nomera
+
+### E [1.8] [nqma nomera]
+# https://www.mobile.bg/obiava-11761474743038422-toyota-yaris-1-8-ts-shveytsariya
+# - 156890 км
+# ++ yaris 1.8
+# + not reseller
+# - nqma nomera
+
+### F [<D]
+# https://www.mobile.bg/obiava-11756114046490491-toyota-yaris-1-3i-87-k-s
+# -- 179000 км
+# + yaris 1.3
+# + not releseeer
+# + ima nomera
+
+##########
 ########## 2025.11.29
 ##########
 

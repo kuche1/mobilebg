@@ -8,6 +8,8 @@ PRICE_MIN_BGN = 3_600
 PRICE_MAX_BGN = 9_000
 PRICE_STEP = 800  # if this is too big, you might miss some of the listings
 
+ENGINE_TYPE_BLACKLIST = ["Дизелов"]
+
 HORSEPOWER_MISSING_OK = True
 HORSEPOWER_MIN: int | None = None  # 75
 
@@ -48,12 +50,11 @@ def BLACKLIST_FNC(car: "Car") -> bool:
 
     if (
         car.link_mobile
-        == "https://www.mobile.bg/obiava-11759826296862845-toyota-yaris-69000-km"
+        in [
+            "https://www.mobile.bg/obiava-11759826296862845-toyota-yaris-69000-km",  # chervena
+            "https://www.mobile.bg/obiava-11749410734098519-toyota-yaris",  # advertising po kolata koito trqbva da se preboqdisa
+        ]
     ):
-        # chervena
-        return True
-
-    if car.engine_type == "Дизелов":
         return True
 
     if car.title in [
@@ -66,6 +67,7 @@ def BLACKLIST_FNC(car: "Car") -> bool:
         "Toyota Yaris 1.0i, обслужена, каско, климатик, перфектна",
         "Toyota Yaris 1.0VVT-i EURO 5 ЛИЗИНГ",
         "Toyota Yaris 1.0i NAVI/KAMERA EURO 5",
+        "Toyota Yaris P1 1.0 Expo",
     ]:
         return True
 
@@ -242,7 +244,7 @@ NET_CACHE_LOC = str(Path(__file__).parent / "cache")
 NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
 NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month
 NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30  # 1 month
-NET_HAD_TO_CONNECT_SLEEP = 0.4  # 0.2 is too little
+NET_HAD_TO_CONNECT_SLEEP = 0.8  # 0.4 is too little IN MULTITHREADED CONTEXT
 
 MOBILE_PREFIX = "https://www.mobile.bg/"
 URL = (
