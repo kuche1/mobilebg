@@ -23,6 +23,7 @@ class Car:
     fuel_consumption_highway: float  # in liters
 
     engine_type: str
+    gearbox: str
     mialage: float  # in km
     price: float  # in eur
     horsepower: int
@@ -38,6 +39,7 @@ class Car:
     horsepower: {self.horsepower}
     length: {self.length_mm} mm
     engine type: {self.engine_type}
+    gearbox: {self.gearbox}
     brand: {self.brand}
     mialage: {self.mialage:_}"""
 
@@ -85,15 +87,13 @@ class Car:
         elem_engine = soup.find("div", class_="item dvigatel")
         engine_type = elem_engine.find("div", class_="mpInfo").text
 
-        elem_horsepower = soup.find("div", class_="item moshtnost")
-        if elem_horsepower is None:
-            horsepower = 0
-        else:
-            horsepower = elem_horsepower.find("div", class_="mpInfo").text
-            tmp = " к.с."
-            assert horsepower.endswith(tmp)
-            horsepower = horsepower.removesuffix(tmp)
-            horsepower = int(horsepower)
+        gearbox = _extract_gearbox(soup)
+        if gearbox is None:
+            return None
+
+        horsepower = _extract_horsepower(soup)
+        if horsepower is None:
+            return None
 
         mialage = _extract_mialage(soup, link_mobile)
 
@@ -125,8 +125,8 @@ class Car:
         if (fuel_consumption_urban is None) or (fuel_consumption_highway is None):
             if config.PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING:
                 print(f"WARNING: could not extract fuel consumption for: {link_mobile}")
-            fuel_consumption_urban = 0  # float('inf')
-            fuel_consumption_highway = 0  # float('inf')
+            fuel_consumption_urban = float("inf")  # 0
+            fuel_consumption_highway = float("inf")  # 0
 
         car_length = extract_autodata_float(soup, "Дължина", " ММ")
         if car_length is None:
@@ -142,6 +142,7 @@ class Car:
             fuel_consumption_urban,
             fuel_consumption_highway,
             engine_type,
+            gearbox,
             mialage,
             price,
             horsepower,
@@ -174,11 +175,11 @@ class Car:
         if brand == "vw":
             brand = "volkswagen"
 
-        if config.WHITELIST_BRAND is not None:
-            if brand not in config.WHITELIST_BRAND:
+        if config.BRAND_WHITELIST is not None:
+            if brand not in config.BRAND_WHITELIST:
                 return None
 
-        if brand in config.BLACKLIST_BRAND:
+        if brand in config.BRAND_BLACKLIST:
             return None
 
         return brand
@@ -216,10 +217,45 @@ def _extract_mialage(soup: BeautifulSoup, link_mobile: str) -> float:
     if elem_mialage is None:
         mialage = float("inf")
     else:
-        mialage = elem_mialage.find("div", class_="mpInfo").text
+        mialage = elem_mialage.find("div", class_="mpInfo").text  # pyright: ignore[reportOptionalMemberAccess]
         tmp = " км"
         assert mialage.endswith(tmp)
         mialage = mialage.removesuffix(tmp)
         mialage = float(mialage)
 
     return mialage
+
+
+def _extract_horsepower(soup: BeautifulSoup) -> int | None:
+    elem_horsepower = soup.find("div", class_="item moshtnost")
+    if elem_horsepower is None:
+        if config.HORSEPOWER_MISSING_OK:
+            return -1
+        else:
+            return None
+    else:
+        horsepower = elem_horsepower.find("div", class_="mpInfo").text  # pyright: ignore[reportOptionalMemberAccess]
+        tmp = " к.с."
+        assert horsepower.endswith(tmp)
+        horsepower = horsepower.removesuffix(tmp)
+        horsepower = int(horsepower)
+
+    if config.HORSEPOWER_MIN is not None:
+        if horsepower < config.HORSEPOWER_MIN:
+            return None
+
+    return horsepower
+
+
+def _extract_gearbox(soup: BeautifulSoup) -> str | None:
+    elem_gearbox = soup.find("div", class_="item skorosti")
+    assert elem_gearbox is not None
+
+    elem_gearbox = elem_gearbox.find("div", class_="mpInfo")
+    assert elem_gearbox is not None
+
+    gearabox = elem_gearbox.text
+    if gearabox in config.GEARBOX_BLACKLIST:
+        return None
+
+    return gearabox

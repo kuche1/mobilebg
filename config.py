@@ -1,48 +1,24 @@
 from pathlib import Path
 
-PRICE_MIN_BGN = 3_600
-PRICE_MAX_BGN = 9_000
-PRICE_STEP = 800  # if this is too big, you might miss some of the listings
-
-EXTRACT_CAR_DATA_MAX_WORKERS: None | int = None
-
-NET_CACHE_LOC = str(Path(__file__).parent / "cache")
-NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
-NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month
-NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30  # 1 month
-NET_HAD_TO_CONNECT_SLEEP = 0.4  # 0.2 is too little
-
-MOBILE_PREFIX = "https://www.mobile.bg/"
-URL = (
-    MOBILE_PREFIX
-    + "obiavi/avtomobili-dzhipove/oblast-sofiya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1"
-)
-# `sort=6` - sort by newest
-# `pictonly=1` - only show if picture is available
-#
-# `namira-se-v-balgariya` - bulgaria
-# `oblast-sofiya` - sofia
-
-URL_PROTO = URL.split("//")[0]
-
-MAX_PAGE = 150
-
-BS_PARSER = "html.parser"
-
-EUR_TO_BGN = 1.95583
-
-PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False
-
 ##########
 ########## car filter
 ##########
 
-WHITELIST_BRAND: list[str] | None = [
+PRICE_MIN_BGN = 3_600
+PRICE_MAX_BGN = 9_000
+PRICE_STEP = 800  # if this is too big, you might miss some of the listings
+
+HORSEPOWER_MISSING_OK = True
+HORSEPOWER_MIN: int | None = None  # 75
+
+GEARBOX_BLACKLIST = ["Автоматична", "Полуавтоматична"]
+
+BRAND_WHITELIST: list[str] | None = [
     # 'honda',
     "toyota"
 ]
 
-BLACKLIST_BRAND: list[str] = [
+BRAND_BLACKLIST: list[str] = [
     # too fragile
     "audi",
     "bmw",
@@ -64,6 +40,43 @@ BLACKLIST_BRAND: list[str] = [
     "mini",
     "jeep",
 ]
+
+
+def BLACKLIST_FNC(car: "Car") -> bool:
+    if "yaris".lower() not in car.title.lower():
+        return True
+
+    if (
+        car.link_mobile
+        == "https://www.mobile.bg/obiava-11759826296862845-toyota-yaris-69000-km"
+    ):
+        # chervena
+        return True
+
+    if car.engine_type == "Дизелов":
+        return True
+
+    if car.title in [
+        "Toyota Land cruiser",
+        "Toyota Yaris 1.0",
+        "Toyota Yaris / 1.0I / EURO 4 / ",
+        "Toyota Yaris 1.0VVT-i/KLIMA",
+        "Toyota Yaris 1.0 EVRO 5B",
+        "Toyota Yaris 1.0 - 69 к.с.",
+        "Toyota Yaris 1.0i, обслужена, каско, климатик, перфектна",
+        "Toyota Yaris 1.0VVT-i EURO 5 ЛИЗИНГ",
+        "Toyota Yaris 1.0i NAVI/KAMERA EURO 5",
+    ]:
+        return True
+
+    for liters in ["5", "8"]:
+        if (liters in car.title) or (liters in car.description):
+            break
+    else:
+        return True
+
+    return False
+
 
 BLACKLIST_LINK_MOBILE: list[str] = [
     "https://www.mobile.bg/obiava-11730218705875847-infiniti-q-q60s",  # broken
@@ -97,17 +110,9 @@ BLACKLIST_LINK_MOBILE: list[str] = [
     "https://www.mobile.bg/obiava-11755950568112190-toyota-iq-vvti-avtomat",  # 2 seats
     "https://www.mobile.bg/obiava-11762695831642034-toyota-corolla-verso",  # wrong wheel
     "https://www.mobile.bg/obiava-11763765782152542-toyota-iq-registrirana",  # 2 seats
+    "https://www.mobile.bg/obiava-11763533567609435-toyota-corolla",  # "shum v motora"
+    "https://www.mobile.bg/obiava-11762276613213029-toyota-yaris-1-8vvti-ts-133-ks",  # Намира се в гр. Долна баня
 ]
-
-
-def BLACKLIST_FNC(car: "Car") -> bool:
-    if car.title in [
-        "Toyota Land cruiser",
-        "Toyota Yaris 1.0",
-    ]:
-        return True
-
-    return False
 
 
 # def BLACKLIST_FNC(car: "Car") -> bool:
@@ -223,3 +228,42 @@ def BLACKLIST_FNC(car: "Car") -> bool:
 #         return True
 
 #     return False
+
+##########
+########## some other shit
+##########
+
+CAR_DEALERSHIP_OK = True
+# this is not accurate - it treats some non-dealers as dealers
+
+EXTRACT_CAR_DATA_MAX_WORKERS: None | int = None
+
+NET_CACHE_LOC = str(Path(__file__).parent / "cache")
+NET_CACHE_DURATION_MOBILEBG_SEC = 60 * 60 * 10  # 10h
+NET_CACHE_DURATION_MOBILEBG_SPECIFIC_CAR_SEC = 60 * 60 * 24 * 30  # 1 month
+NET_CACHE_DURATION_AUTODATA_SEC = 60 * 60 * 24 * 30  # 1 month
+NET_HAD_TO_CONNECT_SLEEP = 0.4  # 0.2 is too little
+
+MOBILE_PREFIX = "https://www.mobile.bg/"
+URL = (
+    MOBILE_PREFIX
+    + "obiavi/avtomobili-dzhipove/oblast-sofiya/p-{page_num}?price={price_min}&price1={price_max}&sort=6&nup=014&pictonly=1"
+)
+# `sort=6` - sort by newest
+# `pictonly=1` - only show if picture is available
+#
+# `namira-se-v-balgariya` - bulgaria
+# `oblast-sofiya` - sofia
+
+if not CAR_DEALERSHIP_OK:
+    URL += "&privonly=1"
+
+URL_PROTO = URL.split("//")[0]
+
+MAX_PAGE = 150
+
+BS_PARSER = "html.parser"
+
+EUR_TO_BGN = 1.95583
+
+PRINT_FUEL_CONSUMPTION_EXTRACTION_WARNING = False

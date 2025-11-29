@@ -1,6 +1,76 @@
 #! /usr/bin/env python3
 
 ##########
+########## 2025.11.29
+##########
+
+##### favourite
+#
+# https://www.mobile.bg/obiava-11655467283811319-toyota-yaris-1-5-vvti
+# yaris 1.5
+# 145_000km
+# 4500lv
+
+# https://www.mobile.bg/obiava-11752001113986537-toyota-corolla
+# corolla
+# 4500lv
+# 132_000km
+# - description-a e chatgpt
+
+# https://www.mobile.bg/obiava-11736084162543148-toyota-avensis-1-8-i-facelift-sedan
+# avensis (damqn mi kaza 4e avensis e dobre + LITERAALY 0 complaints for this (2006) model https://www.carcomplaints.com/Toyota/Avensis/)
+# 6400lv
+# 143_000km
+# + reverse camera (ne sum 100% samo dali e tozi model)
+# - botevgrad
+
+# https://www.mobile.bg/obiava-11755939300096917-toyota-avensis-1-8vvt-i
+# avensis
+# 152_000km
+# 7000lv
+# - ot avtokushta
+
+# https://www.mobile.bg/obiava-11761474743038422-toyota-yaris-1-8-ts-shveytsariya
+# yaris 1.8
+# 157_000km
+# 8550lv
+# - sobsrvenika postoqnno reset-va "Обявата е видяна X пъти"
+
+# https://www.mobile.bg/obiava-11762113522112210-toyota-auris-1-4benzin-97ks-klimatronik-5-vrati
+# auris
+# 7190lv
+# 160_000km
+# - ot avtokushta
+
+# https://www.mobile.bg/obiava-11707333858665119-toyota-avensis-1-8i-klimatronik
+# avensis 2004
+# 161_000km
+# 5250km
+
+# https://www.mobile.bg/obiava-11760697415860317-toyota-yaris-1-3vvt-i-86000km
+# yaris 1.3
+# mialage: 86_000.0
+# - avtokushta
+
+# https://www.mobile.bg/obiava-11757166837297798-toyota-yaris-1-3-87hp
+# yaris 1.3
+# mialage: 103_000.0
+
+# https://www.mobile.bg/obiava-11756028969329844-toyota-yaris-1-3i-87ps-italy
+# yaris 1.3
+# mialage: 132_752.0
+# - avtokushta
+
+# https://www.mobile.bg/obiava-11762231838386479-toyota-yaris-1300-vvt-i
+# yaris 1.3
+# mialage: 135_589.0
+
+# https://www.mobile.bg/obiava-11760952144903028-toyota-yaris-verso-1-3i-86ps-facelift-italy
+# yaris 1.3
+# mialage: 151_000.0
+# - avtokushta
+
+##########
 ########## 2025.11.28
 ##########
 
@@ -64,6 +134,7 @@
 # 5250lv
 # avensis
 # 161_453km
+# - ot avtokushta
 
 ##########
 ########## 2025.09.01
@@ -142,6 +213,8 @@ def main() -> None:
     for car in cars:
         print()
         print(car)
+
+    print()
 
 
 def parse_cmdline() -> None:
