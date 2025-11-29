@@ -275,7 +275,7 @@ from html_extract import (
 
 def main() -> None:
     with ProcessPoolExecutor() as executor:
-        print("Collecting Car Links")
+        print("Car Links Collecting")
 
         future_cars = []
 
@@ -285,9 +285,9 @@ def main() -> None:
                 future_car = executor.submit(extract_car, car_link)
                 future_cars.append(future_car)
 
-        print("Collected Car Links")
+        print("Car Links Collected")
 
-        print("Extracting Car Data")
+        print("Car Data Extracting")
 
         cars = []
 
