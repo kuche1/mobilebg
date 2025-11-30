@@ -6,6 +6,7 @@ from bs4 import (
 from colorama import Fore, Style
 
 import config
+from is_from_reseller import IsFromReseller
 from net import net_req
 from util import extract_autodata_float
 
@@ -24,6 +25,7 @@ class Car:
 
     engine_type: str
     gearbox: str
+    reseller: str | None
     mialage: float  # in km
     price: float  # in eur
     horsepower: int
@@ -40,6 +42,7 @@ class Car:
     length: {self.length_mm} mm
     engine type: {self.engine_type}
     gearbox: {self.gearbox}
+    reseller: {self.reseller}
     brand: {self.brand}
     mialage: {self.mialage:_}"""
 
@@ -64,6 +67,13 @@ class Car:
         soup = BeautifulSoup(car_html, config.BS_PARSER)
 
         elem_info = soup.find("div", class_="contactsBox")
+
+        ##### reseller
+
+        reseller = _extract_reseller(soup, link_mobile)
+        if reseller is not None:
+            if reseller in config.RESELER_BLACKLIST:
+                return None
 
         ### title
 
@@ -144,6 +154,7 @@ class Car:
             fuel_consumption_highway,
             engine_type,
             gearbox,
+            reseller,
             mialage,
             price,
             horsepower,
@@ -274,3 +285,23 @@ def _extract_engine_type(soup: BeautifulSoup) -> str | None:
         return None
 
     return engine_type
+
+
+def _extract_reseller(soup: BeautifulSoup, link_mobile: str) -> str | None:
+    # if link_mobile in [
+    #     "https://www.mobile.bg/obiava-11760697415860317-toyota-yaris-1-3vvt-i-86000km",
+    #     "https://www.mobile.bg/obiava-11756028969329844-toyota-yaris-1-3i-87ps-italy",
+    #     "https://www.mobile.bg/obiava-11746537609870581-toyota-yaris-facelift",
+    # ]:
+    #     return IsFromReseller.YES
+
+    # return IsFromReseller.UNKNOWN
+
+    elem = soup.find("div", class_="dealer")
+    if elem is None:
+        return None
+
+    elem = elem.find("div", class_="name")
+    assert elem is not None
+
+    return elem.text

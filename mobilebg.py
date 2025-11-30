@@ -284,20 +284,26 @@ def main() -> None:
             as_completed(collection_future_car_links), start=1
         ):
             print(
-                f"Car Links: {future_car_links_num}/{len(collection_future_car_links)}"
+                f"Car Links: Pack {future_car_links_num}/{len(collection_future_car_links)}"
             )
+
             car_links = future_car_links.result()
+
             for car_link in car_links:
                 future_car = executor.submit(extract_car, car_link)
                 future_cars.append(future_car)
 
         print("Car Links: Collected")
 
-        print("Car Data Extracting")
+        print("Car Data: Extracting")
 
         cars = []
 
-        for car_future in as_completed(future_cars):
+        for car_future_num, car_future in enumerate(as_completed(future_cars), start=1):
+            print(
+                f"Car Data: {car_future_num}/{len(future_cars)}"
+            )  # TODO: this is a bottleneck
+
             car = car_future.result()
             if car is None:
                 continue
@@ -306,7 +312,7 @@ def main() -> None:
 
             print(f"Extracted Car {len(cars)}")
 
-        print("Car Data Extracted")
+        print("Car Data: Extracted")
 
         # cars.sort(key=lambda car: car.fuel_consumption_urban, reverse=True)
         # cars.sort(key=lambda car: car.mialage, reverse=True)

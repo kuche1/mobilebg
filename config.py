@@ -8,6 +8,15 @@ PRICE_MIN_BGN = 3_600
 PRICE_MAX_BGN = 9_000
 PRICE_STEP = 800  # if this is too big, you might miss some of the listings
 
+RESELER_BLACKLIST = [
+    "DANGER AUTO",
+    "ЕВРОАУТО",
+    "AUTO-KA",
+    "БОМИ АУТО -- гр.София --",
+    "TROYA AUTO",
+    "ХЕЛИОС 901 ООД",
+]
+
 ENGINE_TYPE_BLACKLIST = ["Дизелов"]
 
 HORSEPOWER_MISSING_OK = True
@@ -51,8 +60,10 @@ def BLACKLIST_FNC(car: "Car") -> bool:
     if (
         car.link_mobile
         in [
-            "https://www.mobile.bg/obiava-11759826296862845-toyota-yaris-69000-km",  # chervena
+            # "https://www.mobile.bg/obiava-11759826296862845-toyota-yaris-69000-km",  # chervena
             "https://www.mobile.bg/obiava-11749410734098519-toyota-yaris",  # advertising po kolata koito trqbva da se preboqdisa
+            "https://www.mobile.bg/obiava-11762231838386479-toyota-yaris-1300-vvt-i",  # samokov
+            "https://www.mobile.bg/obiava-11760552257294526-toyota-yaris-1-3",  # kostinbrod
         ]
     ):
         return True
@@ -237,7 +248,7 @@ BLACKLIST_LINK_MOBILE: list[str] = [
 ########## some other shit
 ##########
 
-CAR_DEALERSHIP_OK = True
+MOBILE_TAG_CAR_DEALERSHIP_OK = True
 # this is not accurate - it treats some non-dealers as dealers
 
 NET_CACHE_LOC = str(Path(__file__).parent / "cache")
@@ -257,7 +268,7 @@ URL = (
 # `namira-se-v-balgariya` - bulgaria
 # `oblast-sofiya` - sofia
 
-if not CAR_DEALERSHIP_OK:
+if not MOBILE_TAG_CAR_DEALERSHIP_OK:
     URL += "&privonly=1"
 
 URL_PROTO = URL.split("//")[0]
