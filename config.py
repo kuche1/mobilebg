@@ -72,7 +72,8 @@ def BLACKLIST_FNC(car: "Car") -> bool:
     ]:
         return True
 
-    for liters in ["5", "8"]:
+    ##### only show if we have areason to believe it is 1.3/1.5/1.8
+    for liters in ["3", "5", "8"]:
         if (liters in car.title) or (liters in car.description):
             break
     else:

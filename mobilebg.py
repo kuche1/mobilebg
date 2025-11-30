@@ -275,17 +275,23 @@ from html_extract import (
 
 def main() -> None:
     with ProcessPoolExecutor() as executor:
-        print("Car Links Collecting")
+        print("Car Links: Collecting")
 
         future_cars = []
 
-        for future_car_links in as_completed(extract_car_links_from_website(executor)):
+        collection_future_car_links = set(extract_car_links_from_website(executor))
+        for future_car_links_num, future_car_links in enumerate(
+            as_completed(collection_future_car_links), start=1
+        ):
+            print(
+                f"Car Links: {future_car_links_num}/{len(collection_future_car_links)}"
+            )
             car_links = future_car_links.result()
             for car_link in car_links:
                 future_car = executor.submit(extract_car, car_link)
                 future_cars.append(future_car)
 
-        print("Car Links Collected")
+        print("Car Links: Collected")
 
         print("Car Data Extracting")
 
